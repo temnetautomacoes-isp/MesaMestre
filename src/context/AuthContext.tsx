@@ -124,44 +124,96 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // 3. Usuário Regular: Buscar empresas onde é membro ativo ou dono
-      const { data: membersData } = await supabase
-        .from('company_members')
-        .select('*, company:companies(*)')
-        .eq('user_id', authUser.id)
-        .eq('status', 'active');
-
       const companiesList: Company[] = [];
       let defaultMembership: CompanyMember | null = null;
 
-      if (membersData && membersData.length > 0) {
-        membersData.forEach(m => {
-          if (m.company) {
-            const comp: Company = {
-              id: m.company.id,
-              name: m.company.name,
-              slug: m.company.slug,
-              ownerId: m.company.owner_id,
-              businessType: m.company.business_type,
-              city: m.company.city,
-              state: m.company.state,
-              whatsapp: m.company.whatsapp,
-              status: m.company.status,
-              createdAt: m.company.created_at,
-              updatedAt: m.company.updated_at
-            };
-            companiesList.push(comp);
-            if (!defaultMembership) {
-              defaultMembership = {
-                id: m.id,
-                companyId: m.company_id,
-                userId: m.user_id,
-                role: m.role,
-                status: m.status,
-                createdAt: m.created_at
+      try {
+        const { data: membersData } = await supabase
+          .from('company_members')
+          .select('*, company:companies(*)')
+          .eq('user_id', authUser.id)
+          .eq('status', 'active');
+
+        if (membersData && membersData.length > 0) {
+          membersData.forEach(m => {
+            if (m.company) {
+              const comp: Company = {
+                id: m.company.id,
+                name: m.company.name,
+                slug: m.company.slug,
+                ownerId: m.company.owner_id,
+                businessType: m.company.business_type,
+                city: m.company.city,
+                state: m.company.state,
+                whatsapp: m.company.whatsapp,
+                status: m.company.status,
+                createdAt: m.company.created_at,
+                updatedAt: m.company.updated_at
               };
+              if (!companiesList.some(c => c.id === comp.id)) {
+                companiesList.push(comp);
+              }
+              if (!defaultMembership) {
+                defaultMembership = {
+                  id: m.id,
+                  companyId: m.company_id,
+                  userId: m.user_id,
+                  role: m.role,
+                  status: m.status,
+                  createdAt: m.created_at
+                };
+              }
             }
+          });
+        }
+      } catch (e) {
+        console.warn('Busca de membros da empresa falhou:', e);
+      }
+
+      // 4. Também buscar empresas onde é proprietário direto (owner_id)
+      try {
+        const { data: ownerCompanies } = await supabase
+          .from('companies')
+          .select('*')
+          .eq('owner_id', authUser.id);
+
+        if (ownerCompanies && ownerCompanies.length > 0) {
+          ownerCompanies.forEach(c => {
+            const comp: Company = {
+              id: c.id,
+              name: c.name,
+              slug: c.slug,
+              ownerId: c.owner_id,
+              businessType: c.business_type,
+              city: c.city,
+              state: c.state,
+              whatsapp: c.whatsapp,
+              status: c.status,
+              createdAt: c.created_at,
+              updatedAt: c.updated_at
+            };
+            if (!companiesList.some(item => item.id === comp.id)) {
+              companiesList.push(comp);
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('Busca de empresas por owner_id falhou:', e);
+      }
+
+      // 5. Fallback persistente de localStorage para o usuário
+      if (companiesList.length === 0) {
+        const savedUserCompany = localStorage.getItem('mm_user_company_' + authUser.id);
+        if (savedUserCompany) {
+          try {
+            const parsedComp: Company = JSON.parse(savedUserCompany);
+            if (parsedComp && parsedComp.id) {
+              companiesList.push(parsedComp);
+            }
+          } catch (e) {
+            // Safe parse
           }
-        });
+        }
       }
 
       setUserCompanies(companiesList);
@@ -172,6 +224,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const selected = companiesList.find(c => c.id === savedCompanyId) || companiesList[0];
         setCurrentCompany(selected);
         localStorage.setItem('mm_active_company_id', selected.id);
+        localStorage.setItem('mm_user_company_' + authUser.id, JSON.stringify(selected));
         await fetchSubscription(selected.id);
       } else {
         setCurrentCompany(null);
@@ -520,6 +573,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserCompanies([activeComp]);
       setCurrentCompany(activeComp);
       localStorage.setItem('mm_active_company_id', activeComp.id);
+      localStorage.setItem('mm_user_company_' + user.id, JSON.stringify(activeComp));
       setSubscription({
         id: 'sub-' + activeComp.id,
         companyId: activeComp.id,
