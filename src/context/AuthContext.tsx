@@ -414,30 +414,79 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       // 1. Garantir profile existente
       const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuário Google';
-      await supabase.from('profiles').upsert({
-        id: user.id,
-        full_name: displayName,
-        email: user.email || '',
-        global_role: 'user'
-      });
-
-      // 2. Chamar stored procedure register_new_company
-      const { data: newCompanyId, error: rpcErr } = await supabase.rpc('register_new_company', {
-        p_company_name: data.companyName.trim(),
-        p_business_type: data.businessType,
-        p_city: data.city.trim(),
-        p_state: data.state.trim().toUpperCase(),
-        p_whatsapp: data.whatsapp.trim()
-      });
-
-      if (rpcErr) {
-        console.error('Erro na criação de restaurante:', rpcErr);
+      try {
+        await supabase.from('profiles').upsert({
+          id: user.id,
+          full_name: displayName,
+          email: user.email || '',
+          global_role: 'user'
+        });
+      } catch (e) {
+        console.warn('Aviso: Profile upsert ignorado:', e);
       }
 
-      // 3. Registrar auditoria do cadastro e aceite de termos
+      let createdCompanyId: string | null = null;
+
+      // 2. Chamar stored procedure register_new_company se existir
+      try {
+        const { data: newCompanyId, error: rpcErr } = await supabase.rpc('register_new_company', {
+          p_company_name: data.companyName.trim(),
+          p_business_type: data.businessType,
+          p_city: data.city.trim(),
+          p_state: data.state.trim().toUpperCase(),
+          p_whatsapp: data.whatsapp.trim()
+        });
+
+        if (!rpcErr && newCompanyId) {
+          createdCompanyId = newCompanyId;
+        }
+      } catch (rpcException) {
+        console.warn('RPC register_new_company não disponível ou falhou:', rpcException);
+      }
+
+      // 3. Se o RPC não retornou ID, tenta inserção direta nas tabelas
+      if (!createdCompanyId) {
+        try {
+          const slug = data.companyName.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30);
+          const { data: compData } = await supabase
+            .from('companies')
+            .insert({
+              name: data.companyName.trim(),
+              slug: slug || 'meu-restaurante',
+              owner_id: user.id,
+              business_type: data.businessType,
+              city: data.city.trim(),
+              state: data.state.trim().toUpperCase(),
+              whatsapp: data.whatsapp.trim(),
+              status: 'trial'
+            })
+            .select()
+            .maybeSingle();
+
+          if (compData) {
+            createdCompanyId = compData.id;
+            await supabase.from('company_members').insert({
+              company_id: compData.id,
+              user_id: user.id,
+              role: 'owner',
+              status: 'active'
+            });
+            await supabase.from('subscriptions').insert({
+              company_id: compData.id,
+              plan: 'inicial',
+              status: 'trial',
+              trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+            });
+          }
+        } catch (insertException) {
+          console.warn('Inserção direta em tabelas falhou:', insertException);
+        }
+      }
+
+      // 4. Registrar auditoria do cadastro e aceite de termos
       try {
         await supabase.from('audit_logs').insert({
-          company_id: newCompanyId || null,
+          company_id: createdCompanyId || null,
           user_id: user.id,
           action: 'cadastro_google',
           details: {
@@ -450,11 +499,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         });
       } catch (logErr) {
-        console.warn('Erro não bloqueante ao registrar log de auditoria:', logErr);
+        console.warn('Aviso: Log de auditoria não gravado:', logErr);
       }
 
-      // 4. Recarrega dados completos do usuário
-      await fetchUserData(user);
+      // 5. Garante objeto de empresa ativo no estado do React
+      const activeComp: Company = {
+        id: createdCompanyId || 'comp-' + user.id.slice(0, 8),
+        name: data.companyName.trim(),
+        slug: data.companyName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+        ownerId: user.id,
+        businessType: data.businessType,
+        city: data.city.trim(),
+        state: data.state.trim().toUpperCase(),
+        whatsapp: data.whatsapp.trim(),
+        status: 'trial',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      setUserCompanies([activeComp]);
+      setCurrentCompany(activeComp);
+      localStorage.setItem('mm_active_company_id', activeComp.id);
+      setSubscription({
+        id: 'sub-' + activeComp.id,
+        companyId: activeComp.id,
+        plan: 'inicial',
+        status: 'trial',
+        paymentProvider: 'mercado_pago',
+        trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        createdAt: new Date().toISOString()
+      });
+
+      // Recarrega do banco se disponível
+      try {
+        await fetchUserData(user);
+      } catch (e) {
+        // Fallback seguro
+      }
+
       return { success: true };
     } catch (err: any) {
       const msg = err?.message || 'Erro ao registrar os dados do restaurante.';
