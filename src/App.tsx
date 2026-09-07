@@ -7,6 +7,7 @@ import { ReceiptModal } from './components/ReceiptModal';
 
 // Screens
 import { AuthScreen } from './components/auth/AuthScreen';
+import { GoogleOnboardingModal } from './components/auth/GoogleOnboardingModal';
 import { SuspendedAccountScreen } from './components/screens/SuspendedAccountScreen';
 import { CanceledAccountScreen } from './components/screens/CanceledAccountScreen';
 import { SubscriptionScreen } from './components/screens/SubscriptionScreen';
@@ -25,7 +26,7 @@ import { DicasScreen } from './components/screens/DicasScreen';
 import { Loader2, ChefHat } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
-  const { user, isLoadingAuth, currentCompany, subscription, isSuperAdmin } = useAuth();
+  const { user, isLoadingAuth, currentCompany, userCompanies, subscription, isSuperAdmin } = useAuth();
   const { activeScreen } = useApp();
 
   // 1. Estado de Carregamento Inicial de Sessão
@@ -48,7 +49,12 @@ const MainLayout: React.FC = () => {
     return <AuthScreen />;
   }
 
-  // 3. Verificação de Status da Conta / Assinatura (se não for Super Admin)
+  // 3. Usuário autenticado (ex: via Google) sem empresa cadastrada -> Onboarding Obrigatório
+  if (!isSuperAdmin && (!currentCompany || userCompanies.length === 0)) {
+    return <GoogleOnboardingModal />;
+  }
+
+  // 4. Verificação de Status da Conta / Assinatura (se não for Super Admin)
   if (!isSuperAdmin) {
     const isSuspended = currentCompany?.status === 'suspended' || subscription?.status === 'suspended';
     const isCanceled = currentCompany?.status === 'canceled' || subscription?.status === 'canceled';

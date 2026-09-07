@@ -72,6 +72,16 @@ export interface SignUpData {
   whatsapp: string;
 }
 
+export interface GoogleOnboardingData {
+  companyName: string;
+  businessType: string;
+  city: string;
+  state: string;
+  whatsapp: string;
+  termsAccepted: boolean;
+  termsVersion: string;
+}
+
 export type UserRole = 'dono' | 'balcao' | 'garcom' | 'cozinha';
 
 export interface UserProfile {

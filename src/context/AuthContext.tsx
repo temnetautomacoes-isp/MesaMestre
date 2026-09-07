@@ -6,7 +6,8 @@ import {
   Company, 
   CompanyMember, 
   Subscription, 
-  SignUpData 
+  SignUpData,
+  GoogleOnboardingData
 } from '../types';
 
 interface AuthContextType {
@@ -24,6 +25,8 @@ interface AuthContextType {
   // Ações de Autenticação
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signUp: (data: SignUpData) => Promise<{ success: boolean; error?: string }>;
+  loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
+  registerGoogleCompany: (data: GoogleOnboardingData) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   forgotPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
   resetPassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
@@ -209,6 +212,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let isMounted = true;
 
+    // Verificar se houve erro retornado pelo redirecionamento do OAuth
+    const checkOAuthErrors = () => {
+      try {
+        const searchParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+        
+        const error = searchParams.get('error') || hashParams.get('error');
+        const errorDesc = searchParams.get('error_description') || hashParams.get('error_description');
+
+        if (error || errorDesc) {
+          let msg = 'Não foi possível concluir o login com Google. Tente novamente.';
+          if (error === 'access_denied' || (errorDesc && errorDesc.toLowerCase().includes('denied'))) {
+            msg = 'Login com Google cancelado pelo usuário.';
+          }
+          setAuthError(msg);
+          // Limpa parâmetros da URL sem recarregar a página
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      } catch (e) {
+        console.error('Erro ao processar retorno de OAuth:', e);
+      }
+    };
+
+    checkOAuthErrors();
+
     const initAuth = async () => {
       try {
         if (!isSupabaseConfigured) {
@@ -350,6 +378,91 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
+    setAuthError(null);
+    try {
+      const redirectUrl = window.location.origin;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account'
+          }
+        }
+      });
+
+      if (error) {
+        const msg = 'Não foi possível conectar ao Google. Tente novamente.';
+        setAuthError(msg);
+        return { success: false, error: error.message };
+      }
+      return { success: true };
+    } catch (err: any) {
+      const msg = err?.message || 'Falha ao iniciar autenticação com o Google.';
+      setAuthError(msg);
+      return { success: false, error: msg };
+    }
+  };
+
+  const registerGoogleCompany = async (data: GoogleOnboardingData): Promise<{ success: boolean; error?: string }> => {
+    if (!user) {
+      return { success: false, error: 'Usuário não autenticado.' };
+    }
+    setAuthError(null);
+    try {
+      // 1. Garantir profile existente
+      const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuário Google';
+      await supabase.from('profiles').upsert({
+        id: user.id,
+        full_name: displayName,
+        email: user.email || '',
+        global_role: 'user'
+      });
+
+      // 2. Chamar stored procedure register_new_company
+      const { data: newCompanyId, error: rpcErr } = await supabase.rpc('register_new_company', {
+        p_company_name: data.companyName.trim(),
+        p_business_type: data.businessType,
+        p_city: data.city.trim(),
+        p_state: data.state.trim().toUpperCase(),
+        p_whatsapp: data.whatsapp.trim()
+      });
+
+      if (rpcErr) {
+        console.error('Erro na criação de restaurante:', rpcErr);
+      }
+
+      // 3. Registrar auditoria do cadastro e aceite de termos
+      try {
+        await supabase.from('audit_logs').insert({
+          company_id: newCompanyId || null,
+          user_id: user.id,
+          action: 'cadastro_google',
+          details: {
+            auth_provider: 'google',
+            company_name: data.companyName,
+            business_type: data.businessType,
+            terms_accepted: data.termsAccepted,
+            terms_version: data.termsVersion,
+            timestamp: new Date().toISOString()
+          }
+        });
+      } catch (logErr) {
+        console.warn('Erro não bloqueante ao registrar log de auditoria:', logErr);
+      }
+
+      // 4. Recarrega dados completos do usuário
+      await fetchUserData(user);
+      return { success: true };
+    } catch (err: any) {
+      const msg = err?.message || 'Erro ao registrar os dados do restaurante.';
+      setAuthError(msg);
+      return { success: false, error: msg };
+    }
+  };
+
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
@@ -476,6 +589,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       authError,
       login,
       signUp,
+      loginWithGoogle,
+      registerGoogleCompany,
       signOut,
       forgotPassword,
       resetPassword,

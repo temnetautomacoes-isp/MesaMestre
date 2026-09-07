@@ -19,13 +19,15 @@ import {
   Clock,
   Zap
 } from 'lucide-react';
+import { GoogleButton } from './GoogleButton';
 
 export const AuthScreen: React.FC<{ initialMode?: 'login' | 'register' | 'forgot' | 'reset' }> = ({ initialMode = 'login' }) => {
-  const { login, signUp, forgotPassword, resetPassword, authError, clearAuthError, enterAsSuperAdmin } = useAuth();
+  const { login, signUp, loginWithGoogle, forgotPassword, resetPassword, authError, clearAuthError, enterAsSuperAdmin } = useAuth();
   const { setActiveScreen } = useApp();
 
   const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'reset'>(initialMode);
   const [loading, setLoading] = useState<boolean>(false);
+  const [googleLoading, setGoogleLoading] = useState<boolean>(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -59,6 +61,16 @@ export const AuthScreen: React.FC<{ initialMode?: 'login' | 'register' | 'forgot
     clearAuthError();
     setSuccessMsg(null);
     setFormErrors({});
+  };
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    setFormErrors({});
+    clearAuthError();
+    const res = await loginWithGoogle();
+    if (!res.success) {
+      setGoogleLoading(false);
+    }
   };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -295,7 +307,7 @@ export const AuthScreen: React.FC<{ initialMode?: 'login' | 'register' | 'forgot
 
                 <button 
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || googleLoading}
                   className="w-full bg-gradient-to-r from-[#10B981] to-[#0E7490] hover:from-[#0ea571] hover:to-[#0c667f] text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? (
@@ -310,6 +322,23 @@ export const AuthScreen: React.FC<{ initialMode?: 'login' | 'register' | 'forgot
                     </>
                   )}
                 </button>
+
+                {/* Separador Visual com "ou" */}
+                <div className="relative flex items-center justify-center py-2">
+                  <div className="border-t border-[#1E4B75] w-full" />
+                  <span className="bg-[#0F2537] px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider shrink-0">
+                    ou
+                  </span>
+                  <div className="border-t border-[#1E4B75] w-full" />
+                </div>
+
+                {/* Botão Oficial do Google */}
+                <GoogleButton
+                  onClick={handleGoogleLogin}
+                  loading={googleLoading}
+                  disabled={loading}
+                  text="Continuar com Google"
+                />
 
                 <div className="text-center pt-3 border-t border-[#1E4B75] space-y-3">
                   <p className="text-xs text-slate-300">
@@ -343,6 +372,23 @@ export const AuthScreen: React.FC<{ initialMode?: 'login' | 'register' | 'forgot
             {/* 2. Formulário de CADASTRO (Novo Restaurante) */}
             {mode === 'register' && (
               <form onSubmit={handleRegisterSubmit} className="space-y-3.5 max-h-[70vh] overflow-y-auto pr-1 scrollbar-thin">
+                {/* Botão Oficial do Google para Cadastro */}
+                <GoogleButton
+                  onClick={handleGoogleLogin}
+                  loading={googleLoading}
+                  disabled={loading}
+                  text="Cadastrar com Google"
+                />
+
+                {/* Separador Visual */}
+                <div className="relative flex items-center justify-center py-1">
+                  <div className="border-t border-[#1E4B75] w-full" />
+                  <span className="bg-[#0F2537] px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">
+                    ou cadastre com e-mail
+                  </span>
+                  <div className="border-t border-[#1E4B75] w-full" />
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1">Seu Nome Completo</label>
