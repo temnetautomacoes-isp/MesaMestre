@@ -1,3 +1,77 @@
+export type GlobalRole = 'super_admin' | 'user';
+export type MemberRole = 'owner' | 'manager' | 'cashier' | 'employee';
+export type CompanyStatus = 'trial' | 'active' | 'past_due' | 'suspended' | 'canceled';
+export type SubscriptionPlan = 'inicial' | 'essencial' | 'gestao';
+
+export interface Profile {
+  id: string;
+  fullName: string;
+  email: string;
+  globalRole: GlobalRole;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Company {
+  id: string;
+  name: string;
+  slug: string;
+  ownerId: string;
+  businessType: string;
+  city: string;
+  state: string;
+  whatsapp: string;
+  status: CompanyStatus;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CompanyMember {
+  id: string;
+  companyId: string;
+  userId: string;
+  role: MemberRole;
+  status: 'active' | 'inactive';
+  createdAt?: string;
+  profile?: Profile;
+}
+
+export interface Subscription {
+  id: string;
+  companyId: string;
+  plan: SubscriptionPlan;
+  status: CompanyStatus;
+  paymentProvider: string;
+  mercadoPagoSubscriptionId?: string;
+  trialEndsAt?: string;
+  currentPeriodEndsAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AuditLog {
+  id: string;
+  companyId?: string;
+  userId?: string;
+  action: string;
+  details: Record<string, any>;
+  ipAddress?: string;
+  createdAt: string;
+  companyName?: string;
+  userEmail?: string;
+}
+
+export interface SignUpData {
+  fullName: string;
+  email: string;
+  password: string;
+  companyName: string;
+  businessType: string;
+  city: string;
+  state: string;
+  whatsapp: string;
+}
+
 export type UserRole = 'dono' | 'balcao' | 'garcom' | 'cozinha';
 
 export interface UserProfile {
