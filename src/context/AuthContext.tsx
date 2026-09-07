@@ -30,6 +30,7 @@ interface AuthContextType {
   switchCompany: (companyId: string) => Promise<void>;
   refreshCompanyData: () => Promise<void>;
   clearAuthError: () => void;
+  enterAsSuperAdmin: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -410,6 +411,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const enterAsSuperAdmin = async () => {
+    setIsLoadingAuth(true);
+    try {
+      const adminUser: User = {
+        id: 'c3d8e954-43d1-4076-b03d-d77fec39feb0',
+        email: 'eduardosuperadmin@mesamestre.com.br',
+        app_metadata: { provider: 'email' },
+        user_metadata: { full_name: 'Eduardo Super Admin' },
+        aud: 'authenticated',
+        created_at: new Date().toISOString()
+      } as any;
+
+      setUser(adminUser);
+      setProfile({
+        id: 'c3d8e954-43d1-4076-b03d-d77fec39feb0',
+        fullName: 'Eduardo Super Admin',
+        email: 'eduardosuperadmin@mesamestre.com.br',
+        globalRole: 'super_admin'
+      });
+
+      const { data: allCompanies } = await supabase
+        .from('companies')
+        .select('*')
+        .order('name');
+
+      if (allCompanies && allCompanies.length > 0) {
+        const mapped: Company[] = allCompanies.map(c => ({
+          id: c.id,
+          name: c.name,
+          slug: c.slug,
+          ownerId: c.owner_id,
+          businessType: c.business_type,
+          city: c.city,
+          state: c.state,
+          whatsapp: c.whatsapp,
+          status: c.status,
+          createdAt: c.created_at,
+          updatedAt: c.updated_at
+        }));
+        setUserCompanies(mapped);
+        setCurrentCompany(mapped[0]);
+        localStorage.setItem('mm_active_company_id', mapped[0].id);
+        await fetchSubscription(mapped[0].id);
+      }
+    } catch (e) {
+      console.error('Erro ao entrar como superadmin:', e);
+    } finally {
+      setIsLoadingAuth(false);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -429,7 +481,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       resetPassword,
       switchCompany,
       refreshCompanyData,
-      clearAuthError
+      clearAuthError,
+      enterAsSuperAdmin
     }}>
       {children}
     </AuthContext.Provider>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useApp } from '../../context/AppContext';
 import { 
   ChefHat, 
   Mail, 
@@ -15,11 +16,13 @@ import {
   Loader2,
   ShieldCheck,
   TrendingUp,
-  Clock
+  Clock,
+  Zap
 } from 'lucide-react';
 
 export const AuthScreen: React.FC<{ initialMode?: 'login' | 'register' | 'forgot' | 'reset' }> = ({ initialMode = 'login' }) => {
-  const { login, signUp, forgotPassword, resetPassword, authError, clearAuthError } = useAuth();
+  const { login, signUp, forgotPassword, resetPassword, authError, clearAuthError, enterAsSuperAdmin } = useAuth();
+  const { setActiveScreen } = useApp();
 
   const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'reset'>(initialMode);
   const [loading, setLoading] = useState<boolean>(false);
@@ -308,7 +311,7 @@ export const AuthScreen: React.FC<{ initialMode?: 'login' | 'register' | 'forgot
                   )}
                 </button>
 
-                <div className="text-center pt-3 border-t border-[#1E4B75]">
+                <div className="text-center pt-3 border-t border-[#1E4B75] space-y-3">
                   <p className="text-xs text-slate-300">
                     Não tem uma conta?{' '}
                     <button 
@@ -319,6 +322,20 @@ export const AuthScreen: React.FC<{ initialMode?: 'login' | 'register' | 'forgot
                       Criar minha conta
                     </button>
                   </p>
+
+                  {/* Botão de Acesso Direto Super Admin (Temporário para testes) */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await enterAsSuperAdmin();
+                      setActiveScreen('admin');
+                    }}
+                    className="w-full bg-[#1E4B75]/70 hover:bg-[#1E4B75] text-cyan-300 border border-cyan-500/40 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-md"
+                    title="Acessar painel de administração diretamente"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-cyan-400" />
+                    <span>⚡ Acessar Painel Super Admin (Acesso Direto)</span>
+                  </button>
                 </div>
               </form>
             )}
