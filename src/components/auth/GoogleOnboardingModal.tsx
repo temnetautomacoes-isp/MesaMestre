@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
-import { 
-  Building2, 
-  Store, 
-  Beer, 
-  UtensilsCrossed, 
-  Pizza, 
-  Sandwich, 
-  MapPin, 
-  Phone, 
-  Sparkles, 
-  ArrowRight, 
+import {
+  Building2,
+  Store,
+  Beer,
+  UtensilsCrossed,
+  Pizza,
+  Sandwich,
+  MapPin,
+  Phone,
+  Sparkles,
+  ArrowRight,
   ArrowLeft,
-  ShieldCheck, 
-  Check, 
-  AlertCircle, 
+  ShieldCheck,
+  Check,
+  AlertCircle,
   Loader2,
   FileText,
   X,
@@ -46,7 +46,7 @@ export const GoogleOnboardingModal: React.FC = () => {
   const [state, setState] = useState('SP');
   const [whatsapp, setWhatsapp] = useState('(11) 98765-4321');
   const [termsAccepted, setTermsAccepted] = useState(true);
-  
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -162,7 +162,7 @@ export const GoogleOnboardingModal: React.FC = () => {
     return (
       <div className="fixed inset-0 z-50 bg-[#0B1A28]/95 backdrop-blur-lg flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
         <div className="bg-[#0F2537] border border-[#1E4B75] text-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl my-8 relative flex flex-col">
-          
+
           {/* Header do Passo a Passo */}
           <div className="flex items-center justify-between pb-4 border-b border-[#1E4B75]">
             <div className="flex items-center gap-2">
@@ -189,11 +189,10 @@ export const GoogleOnboardingModal: React.FC = () => {
           {/* Barra de Progresso Visual */}
           <div className="grid grid-cols-5 gap-2 my-4">
             {tourSteps.map((_, idx) => (
-              <div 
+              <div
                 key={idx}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  idx <= currentTourStep ? 'bg-emerald-400 shadow-sm shadow-emerald-500/50' : 'bg-slate-700/60'
-                }`}
+                className={`h-1.5 rounded-full transition-all duration-300 ${idx <= currentTourStep ? 'bg-emerald-400 shadow-sm shadow-emerald-500/50' : 'bg-slate-700/60'
+                  }`}
               />
             ))}
           </div>
@@ -290,7 +289,7 @@ export const GoogleOnboardingModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 bg-[#0B1A28]/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       <div className="bg-[#0F2537] border border-[#1E4B75] text-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl my-8 relative">
-        
+
         {/* Cabeçalho */}
         <div className="flex items-start justify-between gap-4 pb-6 border-b border-[#1E4B75]">
           <div className="flex items-center gap-3">
@@ -315,10 +314,11 @@ export const GoogleOnboardingModal: React.FC = () => {
           <button
             type="button"
             onClick={() => signOut()}
-            className="text-xs text-slate-400 hover:text-slate-200 hover:underline shrink-0"
-            title="Sair desta conta"
+            className="px-3 py-1.5 bg-[#1E4B75]/70 hover:bg-rose-950/80 hover:border-rose-500/50 text-slate-300 hover:text-rose-200 border border-[#1E4B75] rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shrink-0"
+            title="Cancelar e voltar para a tela de login"
           >
-            Trocar conta
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Voltar para Login</span>
           </button>
         </div>
 
@@ -345,11 +345,10 @@ export const GoogleOnboardingModal: React.FC = () => {
                     key={t.id}
                     type="button"
                     onClick={() => setBusinessType(t.id)}
-                    className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
-                      isSelected
+                    className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-all cursor-pointer ${isSelected
                         ? 'bg-emerald-950/60 border-emerald-500 ring-2 ring-emerald-500/30 text-white'
                         : 'bg-[#0B1A28]/80 border-[#1E4B75] text-slate-300 hover:border-slate-500 hover:bg-[#0B1A28]'
-                    }`}
+                      }`}
                   >
                     <div className={`p-2 rounded-lg shrink-0 ${isSelected ? 'bg-emerald-600 text-white' : 'bg-[#1E4B75]/50 text-slate-400'}`}>
                       <Icon className="w-4 h-4" />
@@ -468,11 +467,21 @@ export const GoogleOnboardingModal: React.FC = () => {
           </div>
 
           {/* Botão de Conclusão */}
-          <div className="flex items-center justify-end gap-3 pt-2">
+          {/* Rodapé com Ações */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-[#1E4B75]">
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="text-xs text-slate-400 hover:text-rose-300 flex items-center gap-1.5 transition cursor-pointer order-2 sm:order-1"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Voltar para a tela de Login</span>
+            </button>
+
             <button
               type="submit"
               disabled={loading}
-              className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-[#10B981] to-[#0E7490] hover:from-[#0ea571] hover:to-[#0c627a] text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-[#10B981] to-[#0E7490] hover:from-[#0ea571] hover:to-[#0c627a] text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 order-1 sm:order-2"
             >
               {loading ? (
                 <>
