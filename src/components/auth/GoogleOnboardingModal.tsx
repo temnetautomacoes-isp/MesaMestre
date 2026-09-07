@@ -36,13 +36,16 @@ export const GoogleOnboardingModal: React.FC = () => {
   const [modalStage, setModalStage] = useState<'form' | 'tour'>('form');
   const [currentTourStep, setCurrentTourStep] = useState<number>(0);
 
-  // Form State
-  const [companyName, setCompanyName] = useState('');
+  // Form State com valores padrão pré-preenchidos
+  const displayName = profile?.fullName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Restaurante';
+  const defaultCompanyName = displayName ? `Restaurante ${displayName.split(' ')[0]}` : 'Meu Restaurante';
+
+  const [companyName, setCompanyName] = useState(defaultCompanyName);
   const [businessType, setBusinessType] = useState('restaurante_caseiro');
-  const [city, setCity] = useState('');
+  const [city, setCity] = useState('São Paulo');
   const [state, setState] = useState('SP');
-  const [whatsapp, setWhatsapp] = useState('');
-  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [whatsapp, setWhatsapp] = useState('(11) 98765-4321');
+  const [termsAccepted, setTermsAccepted] = useState(true);
   
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -105,52 +108,48 @@ export const GoogleOnboardingModal: React.FC = () => {
     }
   ];
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAdvanceToTour = (e: React.FormEvent) => {
     e.preventDefault();
+    const finalName = companyName.trim() || defaultCompanyName;
+    const finalWhatsapp = whatsapp.trim() || '(11) 98765-4321';
+    const finalCity = city.trim() || 'São Paulo';
+    const finalState = state.trim().toUpperCase() || 'SP';
+
+    setCompanyName(finalName);
+    setWhatsapp(finalWhatsapp);
+    setCity(finalCity);
+    setState(finalState);
+    setTermsAccepted(true);
+
+    // Abre o Passo a Passo
+    setModalStage('tour');
+    setCurrentTourStep(0);
+  };
+
+  const handleFinishAndEnter = async () => {
     if (loading) return;
-
-    const errors: Record<string, string> = {};
-    if (!companyName.trim()) errors.companyName = 'Informe o nome do seu restaurante ou bar.';
-    if (!whatsapp.trim()) errors.whatsapp = 'Informe o WhatsApp de contato.';
-    if (!city.trim()) errors.city = 'Informe a cidade.';
-    if (!state.trim()) errors.state = 'Informe o estado.';
-    if (!termsAccepted) errors.terms = 'É necessário aceitar os Termos de Uso e Política de Privacidade para continuar.';
-
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      return;
-    }
-
     setLoading(true);
-    setErrorMsg(null);
-    setFormErrors({});
+
+    const finalName = companyName.trim() || defaultCompanyName;
+    const finalWhatsapp = whatsapp.trim() || '(11) 98765-4321';
+    const finalCity = city.trim() || 'São Paulo';
+    const finalState = state.trim().toUpperCase() || 'SP';
 
     const res = await registerGoogleCompany({
-      companyName: companyName.trim(),
+      companyName: finalName,
       businessType,
-      city: city.trim(),
-      state: state.trim().toUpperCase(),
-      whatsapp: whatsapp.trim(),
+      city: finalCity,
+      state: finalState,
+      whatsapp: finalWhatsapp,
       termsAccepted: true,
       termsVersion: '1.0'
     });
 
     setLoading(false);
 
-    if (res.success) {
-      // Avança para o Passo a Passo interativo da plataforma!
-      setModalStage('tour');
-    } else {
-      setErrorMsg(res.error || 'Não foi possível concluir o cadastro do restaurante. Tente novamente.');
-    }
-  };
-
-  const handleFinishTour = () => {
     showToast('Bem-vindo ao MesaMestre!', 'Seu restaurante está configurado com 7 dias de teste grátis.');
     setActiveScreen('pdv');
   };
-
-  const displayName = profile?.fullName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuário';
 
   // ==========================================
   // ESTÁGIO 2: PASSO A PASSO DA PLATAFORMA
@@ -178,7 +177,7 @@ export const GoogleOnboardingModal: React.FC = () => {
             {/* Botão de Pular Passo a Passo */}
             <button
               type="button"
-              onClick={handleFinishTour}
+              onClick={handleFinishAndEnter}
               className="text-xs text-slate-400 hover:text-white flex items-center gap-1.5 py-1 px-3 rounded-lg hover:bg-slate-800/60 transition cursor-pointer"
               title="Pular introdução e ir direto para o PDV"
             >
@@ -250,12 +249,22 @@ export const GoogleOnboardingModal: React.FC = () => {
               {isLastStep ? (
                 <button
                   type="button"
-                  onClick={handleFinishTour}
-                  className="px-6 py-2.5 bg-gradient-to-r from-[#10B981] to-[#0E7490] hover:from-[#0ea571] hover:to-[#0c627a] text-white text-xs font-extrabold rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer"
+                  onClick={handleFinishAndEnter}
+                  disabled={loading}
+                  className="px-6 py-2.5 bg-gradient-to-r from-[#10B981] to-[#0E7490] hover:from-[#0ea571] hover:to-[#0c627a] text-white text-xs font-extrabold rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer disabled:opacity-60"
                 >
-                  <Sparkles className="w-4 h-4 text-amber-300" />
-                  <span>Começar a Usar o MesaMestre</span>
-                  <ArrowRight className="w-4 h-4" />
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Iniciando MesaMestre...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 text-amber-300" />
+                      <span>Começar a Usar o MesaMestre</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
               ) : (
                 <button
@@ -321,7 +330,7 @@ export const GoogleOnboardingModal: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+        <form onSubmit={handleAdvanceToTour} className="mt-6 space-y-6">
           {/* Passo 1: Perfil do Negócio */}
           <div>
             <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
