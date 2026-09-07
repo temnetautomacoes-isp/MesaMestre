@@ -1,0 +1,6 @@
+{
+  "name": "MesaMestre",
+  "description": "SaaS de gestão descomplicada para restaurantes, bares, lanchonetes, marmitarias e pizzarias.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
