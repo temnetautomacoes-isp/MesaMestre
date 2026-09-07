@@ -108,6 +108,112 @@ export const Navigation: React.FC = () => {
   // Define as abas exibidas com base no ambiente ativo
   const navItems = currentEnvironment === 'pdv' ? pdvNavItems : adminNavItems;
 
+  // =========================================================================
+  // MODO 1: CABEÇALHO LIMPO PARA O CAIXA PDV (Apenas as 4 abas e visual limpo)
+  // =========================================================================
+  if (currentEnvironment === 'pdv') {
+    return (
+      <header className="sticky top-0 z-30 bg-[#0F2537] text-white border-b border-[#1E4B75] shadow-md">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex items-center justify-between gap-3 sm:gap-6">
+          
+          {/* Lado Esquerdo: Logo + As 4 Abas do PDV */}
+          <div className="flex items-center gap-3 sm:gap-6 overflow-x-auto scrollbar-none py-0.5">
+            <button
+              type="button"
+              onClick={() => setActiveScreen('hub')}
+              className="flex items-center gap-2 text-left hover:opacity-90 transition shrink-0 cursor-pointer"
+              title="Voltar ao Portal Inicial"
+            >
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#10B981] to-[#0E7490] flex items-center justify-center shadow-inner">
+                <ChefHat className="w-5 h-5 text-white" />
+              </div>
+              <div className="hidden sm:flex flex-col">
+                <span className="font-extrabold text-sm tracking-tight text-white leading-none">
+                  Mesa<span className="text-[#10B981]">Mestre</span>
+                </span>
+                <span className="text-[10px] text-emerald-400 font-semibold mt-0.5">
+                  Caixa PDV
+                </span>
+              </div>
+            </button>
+
+            {/* Divisor */}
+            <div className="h-6 w-px bg-[#1E4B75] shrink-0 hidden sm:block" />
+
+            {/* As 4 Abas Limpas do Caixa PDV */}
+            <nav className="flex items-center space-x-1 sm:space-x-1.5 shrink-0">
+              {pdvNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeScreen === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveScreen(item.id)}
+                    className={`relative px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
+                      isActive 
+                        ? 'bg-[#1E4B75] text-white shadow-sm ring-1 ring-emerald-500/40' 
+                        : 'text-slate-300 hover:text-white hover:bg-[#132A40]'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-[#10B981]' : 'text-slate-400'}`} />
+                    <span>{item.label}</span>
+                    {item.badge && (
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full text-white font-extrabold ${item.badgeColor || 'bg-emerald-500'}`}>
+                        {item.badge}
+                      </span>
+                    )}
+                    {isActive && (
+                      <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#10B981] rounded-full" />
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Lado Direito: Ações Mínimas (Painel Admin, Início, Sair) */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentEnvironment('admin');
+                setActiveScreen('relatorios');
+              }}
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#132A40] hover:bg-[#1E4B75] text-cyan-300 border border-cyan-500/30 text-xs font-bold transition cursor-pointer"
+              title="Acessar o Painel Administrador"
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Painel Admin</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveScreen('hub')}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#0B1A28] hover:bg-[#132A40] text-slate-300 hover:text-white border border-[#1E4B75] text-xs font-bold transition cursor-pointer"
+              title="Voltar ao Portal de Escolha"
+            >
+              <Home className="w-3.5 h-3.5 text-slate-400" />
+              <span className="hidden sm:inline">Início</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="p-1.5 sm:p-2 rounded-xl bg-rose-950/50 hover:bg-rose-900 text-rose-300 border border-rose-500/30 transition cursor-pointer"
+              title="Sair da conta"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+        </div>
+      </header>
+    );
+  }
+
+  // =========================================================================
+  // MODO 2: CABEÇALHO COMPLETO PARA O PAINEL ADMINISTRADOR
+  // =========================================================================
   return (
     <header className="sticky top-0 z-30 bg-[#0F2537] text-white border-b border-[#1E4B75] shadow-md">
       
@@ -216,32 +322,18 @@ export const Navigation: React.FC = () => {
         {/* Status Caixa + Alertas + Alternar Ambiente / Início + Usuário / Logout */}
         <div className="flex items-center gap-2 sm:gap-3">
           
-          {/* Botão de Alternar Ambiente (PDV <-> Admin) */}
-          {currentEnvironment === 'pdv' ? (
-            <button
-              onClick={() => {
-                setCurrentEnvironment('admin');
-                setActiveScreen('relatorios');
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#1E4B75]/70 hover:bg-[#1E4B75] text-cyan-300 border border-cyan-500/40 text-xs font-bold transition cursor-pointer"
-              title="Ir para o Painel Administrador"
-            >
-              <BarChart3 className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden sm:inline">Painel Admin</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => {
-                setCurrentEnvironment('pdv');
-                setActiveScreen('pdv');
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition cursor-pointer"
-              title="Ir para o Caixa PDV"
-            >
-              <ShoppingBag className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden sm:inline">Caixa PDV</span>
-            </button>
-          )}
+          {/* Botão de Alternar Ambiente para Caixa PDV */}
+          <button
+            onClick={() => {
+              setCurrentEnvironment('pdv');
+              setActiveScreen('pdv');
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition cursor-pointer"
+            title="Ir para o Caixa PDV"
+          >
+            <ShoppingBag className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">Caixa PDV</span>
+          </button>
 
           {/* Botão Início (Retornar ao Hub) */}
           <button
@@ -323,10 +415,10 @@ export const Navigation: React.FC = () => {
         </div>
       </div>
 
-      {/* Barra de Navegação dos Módulos */}
+      {/* Barra de Navegação dos Módulos do Painel Admin */}
       <nav className="bg-[#0B1A28] border-t border-[#16334D] px-2 sm:px-6 overflow-x-auto scrollbar-thin">
         <div className="max-w-7xl mx-auto flex items-center space-x-1 py-1">
-          {navItems.map((item) => {
+          {adminNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeScreen === item.id;
             return (
