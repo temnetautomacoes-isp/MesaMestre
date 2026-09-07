@@ -448,7 +448,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     initSupabaseData();
-    return () => { isMounted = false; };
+
+    // Ativa inscrição em tempo real (WebSockets / Supabase Realtime)
+    const unsubscribeRealtime = SupabaseService.subscribeToRealtime({
+      onTableChange: (tableNumber, status, orderData) => {
+        setTableStatuses(prev => ({ ...prev, [tableNumber]: status }));
+        setTableOrders(prev => ({ ...prev, [tableNumber]: orderData }));
+      },
+      onSaleChange: (sale) => {
+        setSalesHistory(prev => {
+          if (prev.some(s => s.id === sale.id)) return prev;
+          return [sale, ...prev];
+        });
+      },
+      onCashChange: (session) => {
+        setCurrentCashSession(session);
+      },
+      onMenuChange: (item, isDelete) => {
+        if (isDelete) {
+          setMenuItems(prev => prev.filter(m => m.id !== item.id));
+        } else {
+          setMenuItems(prev => {
+            const exists = prev.some(m => m.id === item.id);
+            if (exists) {
+              return prev.map(m => m.id === item.id ? item : m);
+            }
+            return [item, ...prev];
+          });
+        }
+      },
+      onIngredientChange: (ing) => {
+        setIngredients(prev => {
+          const exists = prev.some(i => i.id === ing.id);
+          if (exists) {
+            return prev.map(i => i.id === ing.id ? ing : i);
+          }
+          return [...prev, ing];
+        });
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribeRealtime();
+    };
   }, []);
 
   // Persistência local em fallback

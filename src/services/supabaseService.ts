@@ -501,5 +501,132 @@ export const SupabaseService = {
     } catch (e) {
       console.error('Erro ao salvar registro de perda no Supabase:', e);
     }
+  },
+
+  // Inscrição em tempo real (WebSockets / Supabase Realtime)
+  subscribeToRealtime(handlers: {
+    onTableChange?: (tableNumber: number, status: TableStatus, orderData: TableOrder | null) => void;
+    onSaleChange?: (sale: SaleReceipt) => void;
+    onCashChange?: (session: CashRegisterSession) => void;
+    onMenuChange?: (item: MenuItem, isDelete?: boolean) => void;
+    onIngredientChange?: (ing: Ingredient) => void;
+  }) {
+    if (!isSupabaseConfigured) return () => {};
+
+    const channel = supabase
+      .channel('mm-live-channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'mm_table_orders' },
+        (payload) => {
+          if (payload.new && handlers.onTableChange) {
+            const row = payload.new as any;
+            handlers.onTableChange(row.table_number, row.status as TableStatus, row.order_data as TableOrder | null);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'mm_sales_history' },
+        (payload) => {
+          if (payload.new && handlers.onSaleChange) {
+            const s = payload.new as any;
+            const sale: SaleReceipt = {
+              id: s.id,
+              orderNumber: s.order_number,
+              type: s.type as any,
+              tableNumber: s.table_number,
+              customerName: s.customer_name,
+              openedAt: s.opened_at,
+              closedAt: s.closed_at,
+              items: s.items || [],
+              subtotal: Number(s.subtotal),
+              discount: Number(s.discount),
+              serviceFee: Number(s.service_fee),
+              total: Number(s.total),
+              payments: s.payments || [],
+              cashierId: s.cashier_id,
+              cashierName: s.cashier_name
+            };
+            handlers.onSaleChange(sale);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'mm_cash_sessions' },
+        (payload) => {
+          if (payload.new && handlers.onCashChange) {
+            const c = payload.new as any;
+            const session: CashRegisterSession = {
+              id: c.id,
+              openedAt: c.opened_at,
+              closedAt: c.closed_at,
+              isOpen: c.is_open,
+              operatorName: c.operator_name,
+              initialCash: Number(c.initial_cash),
+              movements: c.movements || [],
+              blindClose: c.blind_close,
+              systemTotalsAtClose: c.system_totals_at_close
+            };
+            handlers.onCashChange(session);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'mm_menu_items' },
+        (payload) => {
+          if (payload.eventType === 'DELETE' && payload.old && handlers.onMenuChange) {
+            handlers.onMenuChange({ id: (payload.old as any).id } as MenuItem, true);
+          } else if (payload.new && handlers.onMenuChange) {
+            const m = payload.new as any;
+            const item: MenuItem = {
+              id: m.id,
+              name: m.name,
+              description: m.description || '',
+              price: Number(m.price),
+              categoryId: m.category_id,
+              unit: m.unit || 'un',
+              imageUrl: m.image_url,
+              isActive: m.is_active,
+              costPrice: Number(m.cost_price || 0),
+              stockTracked: Boolean(m.stock_tracked),
+              linkedStockId: m.linked_stock_id,
+              prepTimeMinutes: m.prep_time_minutes,
+              allergens: m.allergens || [],
+              options: m.options || []
+            };
+            handlers.onMenuChange(item, false);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'mm_ingredients' },
+        (payload) => {
+          if (payload.new && handlers.onIngredientChange) {
+            const i = payload.new as any;
+            const ing: Ingredient = {
+              id: i.id,
+              name: i.name,
+              unit: i.unit as any,
+              packageCost: Number(i.package_cost || 0),
+              packageQuantity: Number(i.package_quantity || 1),
+              unitCost: Number(i.cost_per_unit || i.unit_cost || 0),
+              currentStock: Number(i.current_stock || 0),
+              minimumStock: Number(i.min_stock || i.minimum_stock || 0),
+              supplier: i.supplier,
+              lastRestockedDate: i.last_restocked || i.last_restocked_date
+            };
+            handlers.onIngredientChange(ing);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }
 };
