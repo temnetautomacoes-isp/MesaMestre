@@ -22,6 +22,7 @@ export interface Company {
   state: string;
   whatsapp: string;
   status: CompanyStatus;
+  logoUrl?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -107,6 +108,7 @@ export interface BusinessConfig {
   phone: string;
   city: string;
   state: string;
+  logoUrl?: string;
   tableCount: number;
   rates: {
     pix: number;       // e.g. 0%

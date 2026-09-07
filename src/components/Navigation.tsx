@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp, ScreenId } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { 
+  Home,
   ShoppingBag, 
   LayoutGrid, 
   Lock, 
@@ -61,6 +62,7 @@ export const Navigation: React.FC = () => {
   const daysLeft = calculateDaysRemaining();
 
   const navItems: { id: ScreenId; label: string; icon: React.ElementType; badge?: string | number; badgeColor?: string }[] = [
+    { id: 'hub', label: 'Início', icon: Home },
     { id: 'pdv', label: 'PDV Balcão', icon: ShoppingBag },
     { id: 'mesas', label: 'Mesas & Salão', icon: LayoutGrid },
     { 
@@ -120,14 +122,24 @@ export const Navigation: React.FC = () => {
         
         {/* Logo & Seletor de Restaurante */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#10B981] to-[#0E7490] flex items-center justify-center shadow-inner">
+          <button 
+            type="button"
+            onClick={() => setActiveScreen('hub')}
+            className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#10B981] to-[#0E7490] flex items-center justify-center shadow-inner hover:scale-105 transition cursor-pointer"
+            title="Ir para o Portal de Escolha de Ambiente"
+          >
             <ChefHat className="w-6 h-6 text-white" />
-          </div>
+          </button>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-lg tracking-tight text-white flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setActiveScreen('hub')}
+                className="font-extrabold text-lg tracking-tight text-white flex items-center gap-1 hover:text-emerald-300 transition cursor-pointer"
+                title="Ir para o Portal Inicial"
+              >
                 Mesa<span className="text-[#10B981]">Mestre</span>
-              </span>
+              </button>
 
               {/* Status do Plano SaaS */}
               <button 

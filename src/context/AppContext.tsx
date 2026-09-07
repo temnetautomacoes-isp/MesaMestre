@@ -33,6 +33,7 @@ import { isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
 export type ScreenId = 
+  | 'hub'
   | 'login'
   | 'onboarding'
   | 'pdv'
@@ -133,7 +134,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : INITIAL_USERS[0];
   });
 
-  const [activeScreen, setActiveScreen] = useState<ScreenId>('pdv');
+  const [activeScreen, setActiveScreen] = useState<ScreenId>('hub');
   const [isCloudConnected, setIsCloudConnected] = useState<boolean>(isSupabaseConfigured);
   
   const [businessConfig, setBusinessConfig] = useState<BusinessConfig>(() => {

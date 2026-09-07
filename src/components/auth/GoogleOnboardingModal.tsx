@@ -148,7 +148,7 @@ export const GoogleOnboardingModal: React.FC = () => {
     setLoading(false);
 
     showToast('Bem-vindo ao MesaMestre!', 'Seu restaurante está configurado com 7 dias de teste grátis.');
-    setActiveScreen('pdv');
+    setActiveScreen('hub');
   };
 
   // ==========================================

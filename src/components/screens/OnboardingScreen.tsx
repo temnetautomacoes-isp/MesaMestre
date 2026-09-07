@@ -28,6 +28,7 @@ export const OnboardingScreen: React.FC = () => {
     phone: businessConfig.phone,
     city: businessConfig.city,
     state: businessConfig.state,
+    logoUrl: businessConfig.logoUrl || '',
     tableCount: businessConfig.tableCount,
     pixRate: businessConfig.rates.pix,
     debitoRate: businessConfig.rates.debito,
@@ -53,6 +54,7 @@ export const OnboardingScreen: React.FC = () => {
       phone: formData.phone,
       city: formData.city,
       state: formData.state,
+      logoUrl: formData.logoUrl.trim() || undefined,
       tableCount: Number(formData.tableCount),
       rates: {
         pix: Number(formData.pixRate),
@@ -66,7 +68,7 @@ export const OnboardingScreen: React.FC = () => {
     });
 
     showToast('Tudo Pronto!', 'As configurações do seu estabelecimento estão salvas.');
-    setActiveScreen('pdv');
+    setActiveScreen('hub');
   };
 
   return (
@@ -214,6 +216,29 @@ export const OnboardingScreen: React.FC = () => {
                     onChange={e => setFormData(prev => ({ ...prev, tableCount: Number(e.target.value) }))}
                     className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:bg-white focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden"
                   />
+                </div>
+              </div>
+
+              <div className="sm:col-span-2 lg:col-span-3">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  URL da Logo do Estabelecimento <span className="text-slate-400 font-normal">(Opcional - se vazio, usamos as iniciais da empresa)</span>
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="url"
+                    value={formData.logoUrl}
+                    onChange={e => setFormData(prev => ({ ...prev, logoUrl: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:bg-white focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden"
+                    placeholder="https://exemplo.com/minha-logo.png"
+                  />
+                  {formData.logoUrl && (
+                    <img 
+                      src={formData.logoUrl} 
+                      alt="Preview Logo" 
+                      className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0" 
+                      onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                    />
+                  )}
                 </div>
               </div>
             </div>

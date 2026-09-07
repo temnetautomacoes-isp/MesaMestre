@@ -23,6 +23,7 @@ import { EstoqueScreen } from './components/screens/EstoqueScreen';
 import { FinanceiroScreen } from './components/screens/FinanceiroScreen';
 import { RelatoriosScreen } from './components/screens/RelatoriosScreen';
 import { DicasScreen } from './components/screens/DicasScreen';
+import { HubScreen } from './components/screens/HubScreen';
 import { Loader2, ChefHat } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
@@ -66,6 +67,17 @@ const MainLayout: React.FC = () => {
     if (isCanceled) {
       return <CanceledAccountScreen />;
     }
+  }
+
+  // 5. Portal Inicial / Hub de Escolha de Ambiente (Caixa PDV ou Painel Administrador)
+  if (activeScreen === 'hub') {
+    return (
+      <>
+        <HubScreen />
+        <ReceiptModal />
+        <NotificationToast />
+      </>
+    );
   }
 
   return (
