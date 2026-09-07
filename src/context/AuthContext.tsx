@@ -254,11 +254,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (emailOrUsername: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setAuthError(null);
     try {
+      const cleanInput = emailOrUsername.trim().toLowerCase();
+      const normalizedEmail = cleanInput.includes('@') ? cleanInput : `${cleanInput}@mesamestre.com.br`;
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
+        email: normalizedEmail,
         password
       });
 
