@@ -28,6 +28,8 @@ import {
   INITIAL_FINANCIAL_ENTRIES, 
   INITIAL_MASTER_TIPS 
 } from '../mockData';
+import { SupabaseService } from '../services/supabaseService';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 export type ScreenId = 
   | 'login'
@@ -57,6 +59,7 @@ interface AppContextType {
   setActiveScreen: (screen: ScreenId) => void;
   businessConfig: BusinessConfig;
   updateBusinessConfig: (newConfig: Partial<BusinessConfig>) => void;
+  isCloudConnected: boolean;
   
   // Cardápio
   categories: Category[];
@@ -120,20 +123,23 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Usuário inicial: Seu Carlos Silva (Dono) para fácil navegação e demonstração imediata
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     const saved = localStorage.getItem('mesamestre_user');
     return saved ? JSON.parse(saved) : INITIAL_USERS[0];
   });
 
   const [activeScreen, setActiveScreen] = useState<ScreenId>('pdv');
+  const [isCloudConnected, setIsCloudConnected] = useState<boolean>(isSupabaseConfigured);
   
   const [businessConfig, setBusinessConfig] = useState<BusinessConfig>(() => {
     const saved = localStorage.getItem('mesamestre_config');
     return saved ? JSON.parse(saved) : INITIAL_BUSINESS_CONFIG;
   });
 
-  const [categories] = useState<Category[]>(INITIAL_CATEGORIES);
+  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
+  const [users, setUsers] = useState<UserProfile[]>(INITIAL_USERS);
+  const [masterTips, setMasterTips] = useState<MasterTip[]>(INITIAL_MASTER_TIPS);
+
   const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
     const saved = localStorage.getItem('mesamestre_menu');
     return saved ? JSON.parse(saved) : INITIAL_MENU_ITEMS;
@@ -179,7 +185,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   ]);
 
-  // Initial Table status & orders
   const [tableStatuses, setTableStatuses] = useState<Record<number, TableStatus>>({
     1: 'ocupada',
     2: 'livre',
@@ -306,7 +311,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
-  // Current Cash Session
   const [currentCashSession, setCurrentCashSession] = useState<CashRegisterSession>({
     id: 'cash-session-001',
     openedAt: '05/09/2026 10:00',
@@ -333,7 +337,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ]
   });
 
-  // Sales History
   const [salesHistory, setSalesHistory] = useState<SaleReceipt[]>([
     {
       id: 'rec-901',
@@ -415,7 +418,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeReceipt, setActiveReceipt] = useState<SaleReceipt | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  // Persistence effects
+  // Carregamento inicial do Supabase
+  useEffect(() => {
+    let isMounted = true;
+    const initSupabaseData = async () => {
+      try {
+        const cloudData = await SupabaseService.loadAllInitialData();
+        if (cloudData && isMounted) {
+          setIsCloudConnected(true);
+          if (cloudData.businessConfig) setBusinessConfig(cloudData.businessConfig);
+          if (cloudData.users && cloudData.users.length > 0) setUsers(cloudData.users);
+          if (cloudData.categories && cloudData.categories.length > 0) setCategories(cloudData.categories);
+          if (cloudData.menuItems && cloudData.menuItems.length > 0) setMenuItems(cloudData.menuItems);
+          if (cloudData.ingredients && cloudData.ingredients.length > 0) setIngredients(cloudData.ingredients);
+          if (cloudData.recipes && cloudData.recipes.length > 0) setRecipes(cloudData.recipes);
+          if (cloudData.tableOrders) setTableOrders(cloudData.tableOrders);
+          if (cloudData.tableStatuses) setTableStatuses(cloudData.tableStatuses);
+          if (cloudData.salesHistory) setSalesHistory(cloudData.salesHistory);
+          if (cloudData.currentCashSession) setCurrentCashSession(cloudData.currentCashSession);
+          if (cloudData.financialEntries) setFinancialEntries(cloudData.financialEntries);
+          if (cloudData.wasteLogs) setWasteLogs(cloudData.wasteLogs);
+          if (cloudData.masterTips) setMasterTips(cloudData.masterTips);
+          
+          showToast('Supabase Conectado', 'Dados sincronizados com o banco na nuvem!', 'info');
+        }
+      } catch (e) {
+        console.error('Falha ao inicializar com Supabase:', e);
+      }
+    };
+
+    initSupabaseData();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Persistência local em fallback
   useEffect(() => {
     localStorage.setItem('mesamestre_config', JSON.stringify(businessConfig));
   }, [businessConfig]);
@@ -448,7 +484,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateBusinessConfig = (newConfig: Partial<BusinessConfig>) => {
-    setBusinessConfig(prev => ({ ...prev, ...newConfig }));
+    const updated = { ...businessConfig, ...newConfig };
+    setBusinessConfig(updated);
+    SupabaseService.saveBusinessConfig(updated);
     showToast('Configurações Salvas', 'Os dados do estabelecimento foram atualizados.');
   };
 
@@ -458,11 +496,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `prod-${Date.now()}`
     };
     setMenuItems(prev => [newItem, ...prev]);
+    SupabaseService.saveMenuItem(newItem);
     showToast('Prato Adicionado', `${newItem.name} agora está no seu cardápio!`);
   };
 
   const updateMenuItem = (id: string, updated: Partial<MenuItem>) => {
-    setMenuItems(prev => prev.map(item => item.id === id ? { ...item, ...updated } : item));
+    setMenuItems(prev => {
+      const nextList = prev.map(item => {
+        if (item.id === id) {
+          const fullItem = { ...item, ...updated };
+          SupabaseService.saveMenuItem(fullItem);
+          return fullItem;
+        }
+        return item;
+      });
+      return nextList;
+    });
     showToast('Cardápio Atualizado', 'Alterações salvas com sucesso.');
   };
 
@@ -470,11 +519,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMenuItems(prev => prev.map(item => {
       if (item.id === id) {
         const next = !item.isActive;
+        const updatedItem = { ...item, isActive: next };
+        SupabaseService.saveMenuItem(updatedItem);
         showToast(
           next ? 'Item Ativado' : 'Item Pausado', 
           next ? `${item.name} voltou a ficar disponível!` : `${item.name} pausado no cardápio.`
         );
-        return { ...item, isActive: next };
+        return updatedItem;
       }
       return item;
     }));
@@ -485,19 +536,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     
+    const newOrder: TableOrder = {
+      id: `order-${tableNumber}-${Date.now()}`,
+      tableNumber,
+      customerName: customerName.trim() || `Mesa ${tableNumber}`,
+      peopleCount: peopleCount > 0 ? peopleCount : 1,
+      openedAt: timeStr,
+      items: [],
+      status: 'aberta',
+      discount: 0,
+      serviceFeeIncluded: true
+    };
+
     setTableOrders(prev => ({
       ...prev,
-      [tableNumber]: {
-        id: `order-${tableNumber}-${Date.now()}`,
-        tableNumber,
-        customerName: customerName.trim() || `Mesa ${tableNumber}`,
-        peopleCount: peopleCount > 0 ? peopleCount : 1,
-        openedAt: timeStr,
-        items: [],
-        status: 'aberta',
-        discount: 0,
-        serviceFeeIncluded: true
-      }
+      [tableNumber]: newOrder
     }));
 
     setTableStatuses(prev => ({
@@ -505,6 +558,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       [tableNumber]: 'ocupada'
     }));
 
+    SupabaseService.saveTableState(tableNumber, 'ocupada', newOrder);
     showToast('Mesa Aberta', `Mesa ${tableNumber} pronta para receber pedidos!`);
   };
 
@@ -518,10 +572,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    // Auto-open if not open
     let currentOrder = tableOrders[tableNumber];
     if (!currentOrder) {
-      openTable(tableNumber);
       currentOrder = {
         id: `order-${tableNumber}-${Date.now()}`,
         tableNumber,
@@ -547,31 +599,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'enviado_cozinha'
     };
 
-    setTableOrders(prev => {
-      const order = prev[tableNumber] || currentOrder;
-      return {
-        ...prev,
-        [tableNumber]: {
-          ...order,
-          items: [...order.items, newOrderItem]
-        }
-      };
-    });
+    const updatedOrder: TableOrder = {
+      ...currentOrder,
+      items: [...currentOrder.items, newOrderItem]
+    };
+
+    setTableOrders(prev => ({
+      ...prev,
+      [tableNumber]: updatedOrder
+    }));
 
     setTableStatuses(prev => ({
       ...prev,
       [tableNumber]: 'ocupada'
     }));
 
-    // Baixa automática de estoque se produto for estocado (ex: garrafa de cerveja ou lata)
+    SupabaseService.saveTableState(tableNumber, 'ocupada', updatedOrder);
+
+    // Baixa automática de estoque se produto for estocado
     if (item.linkedStockId) {
       setIngredients(prev => prev.map(ing => {
         if (ing.id === item.linkedStockId) {
           const updatedStock = Math.max(0, ing.currentStock - quantity);
+          const updatedIng = { ...ing, currentStock: updatedStock };
+          SupabaseService.saveIngredient(updatedIng);
           if (updatedStock <= ing.minimumStock) {
             showToast('Alerta de Reposição', `${ing.name} atingiu nível baixo (${updatedStock} ${ing.unit})!`, 'warning');
           }
-          return { ...ing, currentStock: updatedStock };
+          return updatedIng;
         }
         return ing;
       }));
@@ -584,12 +639,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTableOrders(prev => {
       const order = prev[tableNumber];
       if (!order) return prev;
+      const updatedOrder = {
+        ...order,
+        items: order.items.filter(it => it.id !== orderItemId)
+      };
+      SupabaseService.saveTableState(tableNumber, tableStatuses[tableNumber] || 'ocupada', updatedOrder);
       return {
         ...prev,
-        [tableNumber]: {
-          ...order,
-          items: order.items.filter(it => it.id !== orderItemId)
-        }
+        [tableNumber]: updatedOrder
       };
     });
     showToast('Item Removido', 'Item cancelado da comanda.');
@@ -597,6 +654,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const setTableStatus = (tableNumber: number, status: TableStatus) => {
     setTableStatuses(prev => ({ ...prev, [tableNumber]: status }));
+    SupabaseService.saveTableState(tableNumber, status, tableOrders[tableNumber]);
   };
 
   const transferTable = (fromTable: number, toTable: number) => {
@@ -606,9 +664,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
+    const updatedTargetOrder = { ...sourceOrder, tableNumber: toTable };
+
     setTableOrders(prev => ({
       ...prev,
-      [toTable]: { ...sourceOrder, tableNumber: toTable },
+      [toTable]: updatedTargetOrder,
       [fromTable]: null
     }));
 
@@ -617,6 +677,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       [toTable]: 'ocupada',
       [fromTable]: 'livre'
     }));
+
+    SupabaseService.saveTableState(fromTable, 'livre', null);
+    SupabaseService.saveTableState(toTable, 'ocupada', updatedTargetOrder);
 
     showToast('Mesa Transferida', `Comanda movida da Mesa ${fromTable} para a Mesa ${toTable} com sucesso!`);
   };
@@ -657,15 +720,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cashierName: currentUser?.name || 'Seu Carlos Silva'
     };
 
-    // Atualiza histórico de vendas
     setSalesHistory(prev => [receipt, ...prev]);
-    
-    // Libera mesa
     setTableOrders(prev => ({ ...prev, [tableNumber]: null }));
     setTableStatuses(prev => ({ ...prev, [tableNumber]: 'livre' }));
-
-    // Define recibo ativo para visualização/impressão
     setActiveReceipt(receipt);
+
+    SupabaseService.saveSaleReceipt(receipt);
+    SupabaseService.saveTableState(tableNumber, 'livre', null);
 
     showToast('Conta Fechada!', `Mesa ${tableNumber} finalizada com sucesso. Recibo emitido!`);
     return receipt;
@@ -706,7 +767,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (menuProd?.linkedStockId) {
         setIngredients(prev => prev.map(ing => {
           if (ing.id === menuProd.linkedStockId) {
-            return { ...ing, currentStock: Math.max(0, ing.currentStock - it.quantity) };
+            const updated = { ...ing, currentStock: Math.max(0, ing.currentStock - it.quantity) };
+            SupabaseService.saveIngredient(updated);
+            return updated;
           }
           return ing;
         }));
@@ -715,6 +778,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setSalesHistory(prev => [receipt, ...prev]);
     setActiveReceipt(receipt);
+    SupabaseService.saveSaleReceipt(receipt);
+
     showToast('Venda Concluída', `Venda rápida de ${formatCurrency(total)} registrada no balcão!`);
     return receipt;
   };
@@ -733,10 +798,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       operatorName: currentUser?.name || 'Operador'
     };
 
-    setCurrentCashSession(prev => ({
-      ...prev,
-      movements: [...prev.movements, newMov]
-    }));
+    const updatedSession = {
+      ...currentCashSession,
+      movements: [...currentCashSession.movements, newMov]
+    };
+
+    setCurrentCashSession(updatedSession);
+    SupabaseService.saveCashSession(updatedSession);
 
     showToast(
       type === 'sangria' ? 'Sangria Realizada' : 'Suprimento Registrado',
@@ -745,7 +813,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const performBlindClose = (counts: BlindCashCount) => {
-    // Calcula o esperado pelo sistema com base nas vendas e troco
     let cashSales = 0;
     let pixSales = 0;
     let debitSales = 0;
@@ -777,8 +844,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const now = new Date();
     const timeStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    setCurrentCashSession(prev => ({
-      ...prev,
+    const closedSession: CashRegisterSession = {
+      ...currentCashSession,
       isOpen: false,
       closedAt: timeStr,
       blindClose: counts,
@@ -797,7 +864,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         cardDiff,
         overallDiff
       }
-    }));
+    };
+
+    setCurrentCashSession(closedSession);
+    SupabaseService.saveCashSession(closedSession);
 
     showToast('Caixa Fechado com Sucesso', 'Conferência cega realizada. Relatório de auditoria pronto para o Carlos!');
   };
@@ -806,14 +876,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const now = new Date();
     const timeStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    setCurrentCashSession({
+    const newSession: CashRegisterSession = {
       id: `cash-session-${Date.now()}`,
       openedAt: timeStr,
       isOpen: true,
       operatorName: currentUser?.name || 'Operador',
       initialCash: initialCash || businessConfig.initialCashDefault,
       movements: []
-    });
+    };
+
+    setCurrentCashSession(newSession);
+    SupabaseService.saveCashSession(newSession);
 
     showToast('Caixa Aberto!', `Turno iniciado com troco de ${formatCurrency(initialCash)}.`);
   };
@@ -824,12 +897,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (ing.id === id) {
         const newStock = ing.currentStock + addedQty;
         const newUnitCost = totalCostPaid ? (totalCostPaid / addedQty) : ing.unitCost;
-        return {
+        const updated = {
           ...ing,
           currentStock: newStock,
           unitCost: newUnitCost,
           lastRestockedDate: 'Hoje'
         };
+        SupabaseService.saveIngredient(updated);
+        return updated;
       }
       return ing;
     }));
@@ -842,11 +917,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `ing-${Date.now()}`
     };
     setIngredients(prev => [...prev, newIng]);
+    SupabaseService.saveIngredient(newIng);
     showToast('Insumo Cadastrado', `${newIng.name} adicionado ao controle de insumos!`);
   };
 
   const updateIngredient = (id: string, data: Partial<Ingredient>) => {
-    setIngredients(prev => prev.map(it => it.id === id ? { ...it, ...data } : it));
+    setIngredients(prev => prev.map(it => {
+      if (it.id === id) {
+        const updated = { ...it, ...data };
+        SupabaseService.saveIngredient(updated);
+        return updated;
+      }
+      return it;
+    }));
     showToast('Insumo Atualizado', 'Dados do ingrediente salvos.');
   };
 
@@ -861,11 +944,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setWasteLogs(prev => [newWaste, ...prev]);
+    SupabaseService.saveWasteLog(newWaste);
 
     // Reduz do estoque correspondente se encontrado
     setIngredients(prev => prev.map(ing => {
       if (ing.name.toLowerCase().includes(data.itemName.toLowerCase())) {
-        return { ...ing, currentStock: Math.max(0, ing.currentStock - data.quantity) };
+        const updated = { ...ing, currentStock: Math.max(0, ing.currentStock - data.quantity) };
+        SupabaseService.saveIngredient(updated);
+        return updated;
       }
       return ing;
     }));
@@ -876,15 +962,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateRecipe = (recipe: Recipe) => {
     setRecipes(prev => {
       const idx = prev.findIndex(r => r.menuItemId === recipe.menuItemId);
+      let updatedList: Recipe[];
       if (idx >= 0) {
-        const updated = [...prev];
-        updated[idx] = recipe;
-        return updated;
+        updatedList = [...prev];
+        updatedList[idx] = recipe;
+      } else {
+        updatedList = [...prev, recipe];
       }
-      return [...prev, recipe];
+      SupabaseService.saveRecipe(recipe);
+      return updatedList;
     });
 
-    // Atualiza também o custo estimado no MenuItem
     const rawCost = recipe.ingredients.reduce((sum, item) => {
       const ing = ingredients.find(i => i.id === item.ingredientId);
       return sum + (ing ? (ing.unitCost * item.quantityNeeded) : 0);
@@ -894,7 +982,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setMenuItems(prev => prev.map(m => {
       if (m.id === recipe.menuItemId) {
-        return { ...m, costPrice: Number(totalCost.toFixed(2)) };
+        const updatedItem = { ...m, costPrice: Number(totalCost.toFixed(2)) };
+        SupabaseService.saveMenuItem(updatedItem);
+        return updatedItem;
       }
       return m;
     }));
@@ -909,6 +999,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `fin-${Date.now()}`
     };
     setFinancialEntries(prev => [newEntry, ...prev]);
+    SupabaseService.saveFinancialEntry(newEntry);
     showToast('Lançamento Financeiro', `${entry.type === 'receita' ? 'Receita' : 'Despesa'} de ${formatCurrency(entry.amount)} cadastrada.`);
   };
 
@@ -917,11 +1008,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (item.id === id) {
         const nextStatus = item.status === 'pago' ? 'pendente' : 'pago';
         const paidDate = nextStatus === 'pago' ? 'Hoje' : undefined;
+        const updated = { ...item, status: nextStatus, paidDate };
+        SupabaseService.saveFinancialEntry(updated);
         showToast(
           nextStatus === 'pago' ? 'Conta Marcada como Paga' : 'Conta Marcada como Pendente',
           `${item.description} - ${formatCurrency(item.amount)}`
         );
-        return { ...item, status: nextStatus, paidDate };
+        return updated;
       }
       return item;
     }));
@@ -929,6 +1022,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteFinancialEntry = (id: string) => {
     setFinancialEntries(prev => prev.filter(f => f.id !== id));
+    SupabaseService.deleteFinancialEntry(id);
     showToast('Lançamento Removido', 'Item excluído do livro caixa.');
   };
 
@@ -936,11 +1030,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider value={{
       currentUser,
       setCurrentUser,
-      users: INITIAL_USERS,
+      users,
       activeScreen,
       setActiveScreen,
       businessConfig,
       updateBusinessConfig,
+      isCloudConnected,
       categories,
       menuItems,
       addMenuItem,
@@ -974,7 +1069,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addFinancialEntry,
       toggleFinancialStatus,
       deleteFinancialEntry,
-      masterTips: INITIAL_MASTER_TIPS,
+      masterTips,
       toasts,
       showToast,
       dismissToast,

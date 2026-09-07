@@ -13,7 +13,8 @@ import {
   Settings, 
   LogOut, 
   AlertCircle,
-  ChefHat
+  ChefHat,
+  Cloud
 } from 'lucide-react';
 
 export const Navigation: React.FC = () => {
@@ -98,6 +99,15 @@ export const Navigation: React.FC = () => {
             <span className={`w-2 h-2 rounded-full ${currentCashSession.isOpen ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
             <span>{currentCashSession.isOpen ? `Caixa Aberto (${formatCurrency(currentCashSession.initialCash)})` : 'Caixa Fechado'}</span>
           </button>
+
+          {/* Status Nuvem / Supabase */}
+          <div 
+            className="text-xs px-2.5 py-1.5 rounded-lg font-semibold bg-emerald-950/70 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 cursor-default"
+            title="Conectado e sincronizado com o Supabase"
+          >
+            <Cloud className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden lg:inline">Nuvem Online</span>
+          </div>
 
           {/* Alerta de Estoque */}
           {lowStockCount > 0 && (
