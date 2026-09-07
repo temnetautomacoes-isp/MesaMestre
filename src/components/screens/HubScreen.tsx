@@ -6,14 +6,7 @@ import {
   ShoppingBag, 
   BarChart3, 
   ArrowRight, 
-  Sparkles, 
-  Store, 
-  ChefHat, 
-  ShieldCheck,
-  Building2,
-  TrendingUp,
-  Receipt,
-  Layers
+  ShieldCheck
 } from 'lucide-react';
 
 /**
@@ -131,24 +124,14 @@ export const HubScreen: React.FC = () => {
       <main className="flex-1 relative z-10 flex flex-col items-center justify-center p-4 sm:p-8 max-w-5xl mx-auto w-full">
         
         {/* Cabeçalho de Boas-Vindas */}
-        <div className="text-center space-y-3 mb-8 sm:mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          
-          <div className="inline-flex items-center gap-2 bg-emerald-950/70 border border-emerald-500/30 text-emerald-300 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-inner">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Portal de Escolha de Ambiente</span>
-          </div>
-
-          <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight max-w-3xl">
+        <div className="text-center mb-8 sm:mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight max-w-3xl mx-auto">
             Seja bem-vindo(a){' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300">
               {companyName}
             </span>
             ,<br className="hidden sm:inline" /> o que deseja acessar agora?
           </h1>
-
-          <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto font-normal leading-relaxed">
-            Selecione o módulo para iniciar a operação de atendimento no salão ou a administração e relatórios do seu negócio.
-          </p>
         </div>
 
         {/* Grade com os 2 Botões Centrais */}
@@ -274,13 +257,6 @@ export const HubScreen: React.FC = () => {
             </div>
           </button>
 
-        </div>
-
-        {/* Rodapé Informativo */}
-        <div className="mt-10 text-center">
-          <p className="text-xs text-slate-400 flex items-center justify-center gap-1.5">
-            <span>Você também pode alternar entre as telas a qualquer momento pelo menu de navegação.</span>
-          </p>
         </div>
 
       </main>
