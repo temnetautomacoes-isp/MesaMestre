@@ -30,6 +30,8 @@ export const Navigation: React.FC = () => {
     setCurrentUser, 
     activeScreen, 
     setActiveScreen, 
+    currentEnvironment,
+    setCurrentEnvironment,
     businessConfig,
     currentCashSession,
     ingredients,
@@ -61,8 +63,8 @@ export const Navigation: React.FC = () => {
   };
   const daysLeft = calculateDaysRemaining();
 
-  const navItems: { id: ScreenId; label: string; icon: React.ElementType; badge?: string | number; badgeColor?: string }[] = [
-    { id: 'hub', label: 'Início', icon: Home },
+  // 1. Abas do Ambiente "Caixa PDV" (Frente de Caixa & Salão)
+  const pdvNavItems: { id: ScreenId; label: string; icon: React.ElementType; badge?: string | number; badgeColor?: string }[] = [
     { id: 'pdv', label: 'PDV Balcão', icon: ShoppingBag },
     { id: 'mesas', label: 'Mesas & Salão', icon: LayoutGrid },
     { 
@@ -73,7 +75,12 @@ export const Navigation: React.FC = () => {
       badgeColor: currentCashSession.isOpen ? 'bg-emerald-500' : 'bg-rose-500'
     },
     { id: 'cardapio', label: 'Cardápio', icon: Utensils },
-    { id: 'ficha_tecnica', label: 'Ficha Técnica', icon: Calculator },
+  ];
+
+  // 2. Abas do Ambiente "Painel Administrador" (Gestão, Relatórios e Configurações)
+  const adminNavItems: { id: ScreenId; label: string; icon: React.ElementType; badge?: string | number; badgeColor?: string }[] = [
+    { id: 'relatorios', label: 'Relatórios', icon: BarChart3 },
+    { id: 'financeiro', label: 'Livro Caixa', icon: Wallet },
     { 
       id: 'estoque', 
       label: 'Estoque & Perdas', 
@@ -81,15 +88,15 @@ export const Navigation: React.FC = () => {
       badge: lowStockCount > 0 ? `${lowStockCount} reposição` : undefined,
       badgeColor: 'bg-amber-500'
     },
-    { id: 'financeiro', label: 'Livro Caixa', icon: Wallet },
-    { id: 'relatorios', label: 'Relatórios', icon: BarChart3 },
+    { id: 'ficha_tecnica', label: 'Ficha Técnica', icon: Calculator },
+    { id: 'cardapio', label: 'Cardápio', icon: Utensils },
     { id: 'dicas', label: 'Dicas do Mestre', icon: Sparkles },
     { id: 'subscription', label: 'Minha Assinatura', icon: CreditCard, badge: subscription?.status === 'trial' ? `${daysLeft}d grátis` : undefined, badgeColor: 'bg-emerald-600' },
     { id: 'onboarding', label: 'Ajustes', icon: Settings },
   ];
 
   if (isSuperAdmin) {
-    navItems.push({
+    adminNavItems.push({
       id: 'admin',
       label: 'Super Admin',
       icon: ShieldCheck,
@@ -97,6 +104,9 @@ export const Navigation: React.FC = () => {
       badgeColor: 'bg-cyan-600'
     });
   }
+
+  // Define as abas exibidas com base no ambiente ativo
+  const navItems = currentEnvironment === 'pdv' ? pdvNavItems : adminNavItems;
 
   return (
     <header className="sticky top-0 z-30 bg-[#0F2537] text-white border-b border-[#1E4B75] shadow-md">
@@ -203,9 +213,46 @@ export const Navigation: React.FC = () => {
           </div>
         </div>
 
-        {/* Status Caixa + Alertas + Usuário / Logout */}
-        <div className="flex items-center gap-3">
+        {/* Status Caixa + Alertas + Alternar Ambiente / Início + Usuário / Logout */}
+        <div className="flex items-center gap-2 sm:gap-3">
           
+          {/* Botão de Alternar Ambiente (PDV <-> Admin) */}
+          {currentEnvironment === 'pdv' ? (
+            <button
+              onClick={() => {
+                setCurrentEnvironment('admin');
+                setActiveScreen('relatorios');
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#1E4B75]/70 hover:bg-[#1E4B75] text-cyan-300 border border-cyan-500/40 text-xs font-bold transition cursor-pointer"
+              title="Ir para o Painel Administrador"
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden sm:inline">Painel Admin</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setCurrentEnvironment('pdv');
+                setActiveScreen('pdv');
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition cursor-pointer"
+              title="Ir para o Caixa PDV"
+            >
+              <ShoppingBag className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">Caixa PDV</span>
+            </button>
+          )}
+
+          {/* Botão Início (Retornar ao Hub) */}
+          <button
+            onClick={() => setActiveScreen('hub')}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#0B1A28] hover:bg-[#132A40] text-slate-300 hover:text-white border border-[#1E4B75] text-xs font-semibold transition cursor-pointer"
+            title="Voltar para a tela inicial de seleção"
+          >
+            <Home className="w-3.5 h-3.5 text-slate-400" />
+            <span className="hidden md:inline">Início</span>
+          </button>
+
           {/* Status Caixa */}
           <button 
             onClick={() => setActiveScreen('caixa')}

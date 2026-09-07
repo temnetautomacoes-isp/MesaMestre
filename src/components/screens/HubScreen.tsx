@@ -32,7 +32,7 @@ const getCompanyInitials = (name: string): string => {
 
 export const HubScreen: React.FC = () => {
   const { currentCompany, user, profile, subscription, isSuperAdmin, signOut } = useAuth();
-  const { businessConfig, setActiveScreen } = useApp();
+  const { businessConfig, setActiveScreen, setCurrentEnvironment } = useApp();
 
   const companyName = currentCompany?.name || businessConfig?.name || 'Seu Restaurante';
   const logoUrl = (currentCompany as any)?.logoUrl || businessConfig?.logoUrl;
@@ -159,7 +159,10 @@ export const HubScreen: React.FC = () => {
           {/* ========================================= */}
           <button
             type="button"
-            onClick={() => setActiveScreen('pdv')}
+            onClick={() => {
+              setCurrentEnvironment('pdv');
+              setActiveScreen('pdv');
+            }}
             className="group relative text-left bg-gradient-to-b from-[#0F2537] to-[#0D1F2D] border border-[#1E4B75] hover:border-emerald-500/80 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl hover:shadow-emerald-950/50 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
           >
             {/* Efeito de brilho de canto no hover */}
@@ -216,7 +219,10 @@ export const HubScreen: React.FC = () => {
           {/* ========================================= */}
           <button
             type="button"
-            onClick={() => setActiveScreen('relatorios')}
+            onClick={() => {
+              setCurrentEnvironment('admin');
+              setActiveScreen('relatorios');
+            }}
             className="group relative text-left bg-gradient-to-b from-[#0F2537] to-[#0D1F2D] border border-[#1E4B75] hover:border-cyan-500/80 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl hover:shadow-cyan-950/50 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
           >
             {/* Efeito de brilho de canto no hover */}

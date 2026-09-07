@@ -48,6 +48,8 @@ export type ScreenId =
   | 'subscription'
   | 'admin';
 
+export type EnvironmentMode = 'pdv' | 'admin';
+
 export interface ToastMessage {
   id: string;
   type: 'success' | 'warning' | 'info' | 'error';
@@ -61,6 +63,8 @@ interface AppContextType {
   users: UserProfile[];
   activeScreen: ScreenId;
   setActiveScreen: (screen: ScreenId) => void;
+  currentEnvironment: EnvironmentMode;
+  setCurrentEnvironment: (env: EnvironmentMode) => void;
   businessConfig: BusinessConfig;
   updateBusinessConfig: (newConfig: Partial<BusinessConfig>) => void;
   isCloudConnected: boolean;
@@ -135,6 +139,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [activeScreen, setActiveScreen] = useState<ScreenId>('hub');
+  const [currentEnvironment, setCurrentEnvironment] = useState<EnvironmentMode>('pdv');
   const [isCloudConnected, setIsCloudConnected] = useState<boolean>(isSupabaseConfigured);
   
   const [businessConfig, setBusinessConfig] = useState<BusinessConfig>(() => {
@@ -1082,6 +1087,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       users,
       activeScreen,
       setActiveScreen,
+      currentEnvironment,
+      setCurrentEnvironment,
       businessConfig,
       updateBusinessConfig,
       isCloudConnected,
