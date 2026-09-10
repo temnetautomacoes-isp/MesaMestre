@@ -174,9 +174,9 @@ export const AuthScreen: React.FC<{ initialMode?: 'login' | 'register' | 'forgot
     <div className="min-h-screen bg-gradient-to-br from-[#0B1A28] via-[#0F2537] to-[#132A40] text-white flex items-center justify-center p-4 sm:p-6 selection:bg-emerald-500 selection:text-white">
       <div className="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
         
-        {/* Lado Esquerdo: Identidade do MesaMestre & Benefícios */}
-        <div className="lg:col-span-6 space-y-6">
-          <div className="flex items-center gap-3">
+        {/* Lado Esquerdo / Inferior no Mobile: Identidade do MesaMestre & Benefícios */}
+        <div className="order-2 lg:order-1 lg:col-span-6 space-y-6">
+          <div className="hidden lg:flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#10B981] to-[#0E7490] flex items-center justify-center shadow-lg shadow-emerald-950/40">
               <ChefHat className="w-7 h-7 text-white" />
             </div>
@@ -216,10 +216,23 @@ export const AuthScreen: React.FC<{ initialMode?: 'login' | 'register' | 'forgot
           </div>
         </div>
 
-        {/* Lado Direito: Card de Formulário (Login / Cadastro / Recuperação) */}
-        <div className="lg:col-span-6">
+        {/* Lado Direito / Superior no Mobile: Card de Formulário (Login / Cadastro / Recuperação) */}
+        <div className="order-1 lg:order-2 lg:col-span-6">
           <div className="bg-[#0F2537]/90 backdrop-blur-xl border border-[#1E4B75] rounded-3xl p-6 sm:p-8 shadow-2xl shadow-black/50">
             
+            {/* Logo Mobile no topo do formulário */}
+            <div className="flex lg:hidden items-center gap-2.5 mb-5 pb-4 border-b border-[#1E4B75]/60">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#10B981] to-[#0E7490] flex items-center justify-center shadow-md">
+                <ChefHat className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-extrabold tracking-tight leading-none text-white">
+                  Mesa<span className="text-[#10B981]">Mestre</span>
+                </h2>
+                <span className="text-[10px] text-emerald-400 font-semibold">Gestão para Restaurantes</span>
+              </div>
+            </div>
+
             {/* Header do Card */}
             <div className="mb-6">
               <div className="flex items-center justify-between">
