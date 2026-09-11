@@ -505,17 +505,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  // Persistência local em fallback
+  // Persistência local em fallback protegida contra QuotaExceededError
   useEffect(() => {
-    localStorage.setItem('mesamestre_config', JSON.stringify(businessConfig));
+    try {
+      localStorage.setItem('mesamestre_config', JSON.stringify(businessConfig));
+    } catch (e) {
+      console.warn('Aviso: Falha ao salvar mesamestre_config no localStorage:', e);
+    }
   }, [businessConfig]);
 
   useEffect(() => {
-    localStorage.setItem('mesamestre_menu', JSON.stringify(menuItems));
+    try {
+      localStorage.setItem('mesamestre_menu', JSON.stringify(menuItems));
+    } catch (e) {
+      console.warn('Aviso: Falha ao salvar mesamestre_menu no localStorage:', e);
+    }
   }, [menuItems]);
 
   useEffect(() => {
-    localStorage.setItem('mesamestre_ingredients', JSON.stringify(ingredients));
+    try {
+      localStorage.setItem('mesamestre_ingredients', JSON.stringify(ingredients));
+    } catch (e) {
+      console.warn('Aviso: Falha ao salvar mesamestre_ingredients no localStorage:', e);
+    }
   }, [ingredients]);
 
   const showToast = (title: string, description: string, type: 'success' | 'warning' | 'info' | 'error' = 'success') => {

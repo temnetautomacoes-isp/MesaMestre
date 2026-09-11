@@ -722,7 +722,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserCompanies(prev => prev.map(c => c.id === updated.id ? updated : c));
       
       if (user) {
-        localStorage.setItem('mm_user_company_' + user.id, JSON.stringify(updated));
+        try {
+          localStorage.setItem('mm_user_company_' + user.id, JSON.stringify(updated));
+        } catch (e) {
+          console.warn('Aviso: Falha ao salvar mm_user_company no localStorage:', e);
+        }
+
         try {
           await supabase.from('companies').update({
             name: updated.name,

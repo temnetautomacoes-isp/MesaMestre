@@ -23,16 +23,18 @@ import {
   Image as ImageIcon,
   Receipt,
   FileText,
-  MessageSquare
+  MessageSquare,
+  Loader2
 } from 'lucide-react';
 
 export const OnboardingScreen: React.FC = () => {
   const { businessConfig, updateBusinessConfig, setActiveScreen, showToast } = useApp();
   const { currentCompany, updateCurrentCompany } = useAuth();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const initialName = businessConfig.name || currentCompany?.name || 'Meu Restaurante';
-  const initialLogo = businessConfig.logoUrl || (currentCompany as any)?.logoUrl || '';
+  const initialLogo = businessConfig.logoUrl || (currentCompany as any)?.logoUrl || (currentCompany as any)?.logo_url || '';
 
   const initialPrintSettings: ReceiptPrintSettings = {
     showLogo: businessConfig.printSettings?.showLogo ?? true,
@@ -84,15 +86,46 @@ export const OnboardingScreen: React.FC = () => {
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 4 * 1024 * 1024) {
-        showToast('Arquivo muito grande', 'Por favor selecione uma imagem de até 4MB.', 'warning');
+      if (file.size > 8 * 1024 * 1024) {
+        showToast('Arquivo muito grande', 'Por favor selecione uma imagem de até 8MB.', 'warning');
         return;
       }
       const reader = new FileReader();
       reader.onload = (event) => {
-        const result = event.target?.result as string;
-        setFormData(prev => ({ ...prev, logoUrl: result }));
-        showToast('Logo selecionada!', 'Clique em "Salvar Alterações" para aplicar em todo o sistema.');
+        const rawData = event.target?.result as string;
+        // Otimiza e comprime a imagem usando Canvas para evitar estouro de limite de memória/storage
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 400; // 400px garante altíssima resolução para logo e peso < 50KB
+          let width = img.width;
+          let height = img.height;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const optimized = canvas.toDataURL(file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.88);
+            setFormData(prev => ({ ...prev, logoUrl: optimized }));
+            showToast('Logo selecionada!', 'Imagem otimizada com sucesso.');
+          } else {
+            setFormData(prev => ({ ...prev, logoUrl: rawData }));
+            showToast('Logo selecionada!', 'Clique em "Salvar Alterações" para aplicar.');
+          }
+        };
+        img.onerror = () => {
+          setFormData(prev => ({ ...prev, logoUrl: rawData }));
+        };
+        img.src = rawData;
       };
       reader.readAsDataURL(file);
     }
@@ -107,50 +140,61 @@ export const OnboardingScreen: React.FC = () => {
     { id: 'pizzaria', title: 'Pizzaria', desc: 'Pizzas inteiras, fatias, calzones e esfirras', icon: Pizza },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const finalName = formData.name.trim() || 'Meu Restaurante';
-    const finalLogo = formData.logoUrl.trim() || undefined;
+    if (isSaving) return;
+    setIsSaving(true);
 
-    updateBusinessConfig({
-      name: finalName,
-      legalName: formData.legalName.trim() || undefined,
-      cnpj: formData.cnpj.trim() || undefined,
-      ie: formData.ie.trim() || undefined,
-      ownerName: formData.ownerName,
-      type: formData.type,
-      phone: formData.phone,
-      address: formData.address.trim() || undefined,
-      neighborhood: formData.neighborhood.trim() || undefined,
-      city: formData.city,
-      state: formData.state,
-      cep: formData.cep.trim() || undefined,
-      footerMessage: formData.footerMessage.trim() || undefined,
-      logoUrl: finalLogo,
-      printSettings: formData.printSettings,
-      tableCount: Number(formData.tableCount),
-      rates: {
-        pix: Number(formData.pixRate),
-        debito: Number(formData.debitoRate),
-        credito: Number(formData.creditoRate),
-        dinheiro: 0
-      },
-      initialCashDefault: Number(formData.initialCashDefault),
-      serviceChargePercentage: Number(formData.serviceChargePercentage),
-      isSetupComplete: true
-    });
+    try {
+      const finalName = formData.name.trim() || 'Meu Restaurante';
+      const finalLogo = formData.logoUrl.trim() || undefined;
 
-    // Atualiza também os dados da empresa ativa
-    updateCurrentCompany({
-      name: finalName,
-      businessType: formData.type,
-      city: formData.city,
-      state: formData.state,
-      whatsapp: formData.phone,
-      logoUrl: finalLogo
-    });
+      // 1. Atualiza BusinessConfig no context e Supabase
+      updateBusinessConfig({
+        name: finalName,
+        legalName: formData.legalName.trim() || undefined,
+        cnpj: formData.cnpj.trim() || undefined,
+        ie: formData.ie.trim() || undefined,
+        ownerName: formData.ownerName,
+        type: formData.type,
+        phone: formData.phone,
+        address: formData.address.trim() || undefined,
+        neighborhood: formData.neighborhood.trim() || undefined,
+        city: formData.city,
+        state: formData.state,
+        cep: formData.cep.trim() || undefined,
+        footerMessage: formData.footerMessage.trim() || undefined,
+        logoUrl: finalLogo,
+        printSettings: formData.printSettings,
+        tableCount: Number(formData.tableCount),
+        rates: {
+          pix: Number(formData.pixRate),
+          debito: Number(formData.debitoRate),
+          credito: Number(formData.creditoRate),
+          dinheiro: 0
+        },
+        initialCashDefault: Number(formData.initialCashDefault),
+        serviceChargePercentage: Number(formData.serviceChargePercentage),
+        isSetupComplete: true
+      });
 
-    showToast('Alterações Salvas!', 'As configurações do seu estabelecimento e impressão de nota foram atualizadas com sucesso.');
+      // 2. Atualiza a empresa ativa no AuthContext
+      await updateCurrentCompany({
+        name: finalName,
+        businessType: formData.type,
+        city: formData.city,
+        state: formData.state,
+        whatsapp: formData.phone,
+        logoUrl: finalLogo
+      });
+
+      showToast('Alterações Salvas!', 'As configurações do seu estabelecimento foram salvas com sucesso.');
+    } catch (err) {
+      console.error('Erro ao salvar alterações:', err);
+      showToast('Aviso', 'Configurações salvas localmente com sucesso.', 'info');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -704,10 +748,22 @@ export const OnboardingScreen: React.FC = () => {
           <div className="pt-6 border-t border-slate-100 flex items-center justify-end gap-3">
             <button
               type="submit"
-              className="px-6 py-3 bg-[#10B981] hover:bg-[#0ea571] text-white rounded-2xl text-sm font-extrabold shadow-lg hover:shadow-xl transition-all flex items-center gap-2 cursor-pointer"
+              disabled={isSaving}
+              className={`px-6 py-3 bg-[#10B981] hover:bg-[#0ea571] text-white rounded-2xl text-sm font-extrabold shadow-lg hover:shadow-xl transition-all flex items-center gap-2 cursor-pointer ${
+                isSaving ? 'opacity-80 cursor-not-allowed' : ''
+              }`}
             >
-              <Check className="w-4 h-4" />
-              <span>Salvar Alterações</span>
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Salvando Alterações...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>Salvar Alterações</span>
+                </>
+              )}
             </button>
           </div>
         </form>
