@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { BusinessType } from '../../types';
 import { 
@@ -16,11 +16,15 @@ import {
   Phone, 
   MapPin, 
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Upload,
+  Trash2,
+  Image as ImageIcon
 } from 'lucide-react';
 
 export const OnboardingScreen: React.FC = () => {
   const { businessConfig, updateBusinessConfig, setActiveScreen, showToast } = useApp();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [formData, setFormData] = useState({
     name: businessConfig.name,
@@ -37,6 +41,23 @@ export const OnboardingScreen: React.FC = () => {
     initialCashDefault: businessConfig.initialCashDefault,
     serviceChargePercentage: businessConfig.serviceChargePercentage
   });
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 4 * 1024 * 1024) {
+        showToast('Arquivo muito grande', 'Por favor selecione uma imagem de até 4MB.', 'warning');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        setFormData(prev => ({ ...prev, logoUrl: result }));
+        showToast('Logo selecionada!', 'Clique em "Salvar Alterações" para aplicar em todo o sistema.');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const businessTypes: { id: BusinessType; title: string; desc: string; icon: React.ElementType }[] = [
     { id: 'restaurante', title: 'Restaurante', desc: 'Pratos feitos, self-service e almoço de família', icon: UtensilsCrossed },
@@ -221,25 +242,62 @@ export const OnboardingScreen: React.FC = () => {
               </div>
 
               <div className="sm:col-span-2 lg:col-span-3">
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  URL da Logo do Estabelecimento <span className="text-slate-400 font-normal">(Opcional - se vazio, usamos as iniciais da empresa)</span>
+                <label className="block text-xs font-semibold text-slate-700 mb-2">
+                  Logo da Marca do Restaurante <span className="text-slate-400 font-normal">(Recomendado: imagem PNG com fundo transparente ou JPG)</span>
                 </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="url"
-                    value={formData.logoUrl}
-                    onChange={e => setFormData(prev => ({ ...prev, logoUrl: e.target.value }))}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:bg-white focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden"
-                    placeholder="https://exemplo.com/minha-logo.png"
-                  />
-                  {formData.logoUrl && (
-                    <img 
-                      src={formData.logoUrl} 
-                      alt="Preview Logo" 
-                      className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0" 
-                      onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
-                    />
+                
+                {/* Input Invisível para Upload de Arquivo */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                />
+
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                  {/* Visualizador / Preview da Logo */}
+                  {formData.logoUrl ? (
+                    <div className="relative w-20 h-20 rounded-2xl bg-white border border-slate-200 shadow-sm p-1.5 flex items-center justify-center shrink-0 overflow-hidden group">
+                      <img
+                        src={formData.logoUrl}
+                        alt="Logo do Restaurante"
+                        className="w-full h-full object-contain rounded-xl"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-[#10B981] to-[#0E7490] flex items-center justify-center text-white font-extrabold text-xl shadow-sm shrink-0 border border-emerald-400/40">
+                      {formData.name ? formData.name.substring(0, 2).toUpperCase() : 'MM'}
+                    </div>
                   )}
+
+                  {/* Ações de Upload e Informações */}
+                  <div className="space-y-2 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-4 py-2.5 rounded-xl bg-[#1E4B75] hover:bg-[#255e94] text-white text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-sm"
+                      >
+                        <Upload className="w-4 h-4" />
+                        <span>{formData.logoUrl ? 'Trocar Imagem (PNG/JPG)' : 'Fazer Upload da Logo (PNG)'}</span>
+                      </button>
+
+                      {formData.logoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, logoUrl: '' }))}
+                          className="px-3.5 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span>Remover</span>
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      Esta foto/logo aparecerá no topo do menu lateral (Sidebar), no portal inicial e no cabeçalho das impressões.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

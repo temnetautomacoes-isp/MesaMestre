@@ -27,6 +27,19 @@ interface SidebarProps {
   setIsMobileOpen: (open: boolean) => void;
 }
 
+/**
+ * Extrai até 2 iniciais do nome do restaurante
+ */
+const getCompanyInitials = (name: string): string => {
+  if (!name) return 'MM';
+  const cleanName = name.trim().replace(/^(o|a|os|as|do|da|dos|das|de)\s+/i, '');
+  const words = cleanName.split(/\s+/).filter(Boolean);
+  if (words.length === 1) {
+    return words[0].substring(0, 2).toUpperCase();
+  }
+  return (words[0][0] + words[1][0]).toUpperCase();
+};
+
 export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, setIsMobileOpen }) => {
   const {
     activeScreen,
@@ -159,38 +172,70 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, setIsMobileOpen 
         {/* Identificação do Restaurante & Alternância */}
         <div className="px-3.5 py-3 border-b border-[#1E4B75]/70 bg-[#0F2537]/50">
           <div className="relative">
-            {userCompanies.length > 1 || isSuperAdmin ? (
-              <button
-                type="button"
-                onClick={() => setShowCompanyMenu(!showCompanyMenu)}
-                className="w-full flex items-center justify-between p-2 rounded-xl bg-[#0F2537] hover:bg-[#132A40] border border-[#1E4B75] text-left transition cursor-pointer"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Building2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            {(() => {
+              const companyName = currentCompany?.name || businessConfig?.name || 'Seu Restaurante';
+              const logoUrl = (currentCompany as any)?.logoUrl || businessConfig?.logoUrl;
+              const companyInitials = getCompanyInitials(companyName);
+
+              return userCompanies.length > 1 || isSuperAdmin ? (
+                <button
+                  type="button"
+                  onClick={() => setShowCompanyMenu(!showCompanyMenu)}
+                  className="w-full flex items-center justify-between p-2 rounded-xl bg-[#0F2537] hover:bg-[#132A40] border border-[#1E4B75] text-left transition cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {logoUrl ? (
+                      <img
+                        src={logoUrl}
+                        alt={companyName}
+                        className="w-8 h-8 rounded-lg object-cover border border-[#1E4B75] shrink-0 bg-white/10"
+                      />
+                    ) : (
+                      <div
+                        className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#10B981] to-[#0E7490] flex items-center justify-center font-extrabold text-white text-[11px] tracking-wider shadow-sm border border-emerald-400/40 shrink-0"
+                        title={companyName}
+                      >
+                        {companyInitials}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-white truncate">
+                        {companyName}
+                      </p>
+                      <p className="text-[10px] text-emerald-400 font-medium">
+                        {subscription?.status === 'trial' ? `Trial (${daysLeft}d restantes)` : 'Plano Ativo'}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </button>
+              ) : (
+                <div className="p-2 rounded-xl bg-[#0F2537] border border-[#1E4B75] flex items-center gap-2.5">
+                  {logoUrl ? (
+                    <img
+                      src={logoUrl}
+                      alt={companyName}
+                      className="w-8 h-8 rounded-lg object-cover border border-[#1E4B75] shrink-0 bg-white/10"
+                    />
+                  ) : (
+                    <div
+                      className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#10B981] to-[#0E7490] flex items-center justify-center font-extrabold text-white text-[11px] tracking-wider shadow-sm border border-emerald-400/40 shrink-0"
+                      title={companyName}
+                    >
+                      {companyInitials}
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-white truncate">
-                      {currentCompany?.name || businessConfig.name}
+                      {companyName}
                     </p>
                     <p className="text-[10px] text-emerald-400 font-medium">
                       {subscription?.status === 'trial' ? `Trial (${daysLeft}d restantes)` : 'Plano Ativo'}
                     </p>
                   </div>
                 </div>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              </button>
-            ) : (
-              <div className="p-2 rounded-xl bg-[#0F2537] border border-[#1E4B75] flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-white truncate">
-                    {currentCompany?.name || businessConfig.name}
-                  </p>
-                  <p className="text-[10px] text-emerald-400 font-medium">
-                    {subscription?.status === 'trial' ? `Trial (${daysLeft}d restantes)` : 'Plano Ativo'}
-                  </p>
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Menu Dropdown de Empresas */}
             {showCompanyMenu && (
