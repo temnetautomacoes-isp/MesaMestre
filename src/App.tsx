@@ -26,9 +26,13 @@ import { DicasScreen } from './components/screens/DicasScreen';
 import { HubScreen } from './components/screens/HubScreen';
 import { Loader2, ChefHat } from 'lucide-react';
 
+import { Sidebar } from './components/Sidebar';
+import { AdminHeader } from './components/AdminHeader';
+
 const MainLayout: React.FC = () => {
   const { user, isLoadingAuth, currentCompany, userCompanies, subscription, isSuperAdmin } = useAuth();
-  const { activeScreen } = useApp();
+  const { activeScreen, currentEnvironment } = useApp();
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = React.useState(false);
 
   // 1. Estado de Carregamento Inicial de Sessão
   if (isLoadingAuth) {
@@ -102,31 +106,60 @@ const MainLayout: React.FC = () => {
     );
   }
 
+  // 6. Ambiente PDV (Frente de Caixa em tela cheia otimizada para operador)
+  if (currentEnvironment === 'pdv') {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans selection:bg-emerald-100 selection:text-emerald-900">
+        {/* Barra de Navegação Superior do PDV */}
+        <Navigation />
+
+        {/* Conteúdo da Tela Ativa no PDV */}
+        <main className="flex-1 pb-16">
+          {activeScreen === 'pdv' && <PdvScreen />}
+          {activeScreen === 'mesas' && <MesasScreen />}
+          {(activeScreen === 'caixa' || (activeScreen as string) === 'caixa_cego') && <CaixaCegoScreen />}
+          {activeScreen === 'cardapio' && <CardapioScreen />}
+          {activeScreen === 'login' && <LoginScreen />}
+        </main>
+
+        <ReceiptModal />
+        <NotificationToast />
+      </div>
+    );
+  }
+
+  // 7. Ambiente Painel Administrador (Layout Moderno com Sidebar Lateral)
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans selection:bg-emerald-100 selection:text-emerald-900">
-      {/* Barra de Navegação Superior */}
-      <Navigation />
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex font-sans selection:bg-emerald-100 selection:text-emerald-900">
+      {/* Menu Lateral (Sidebar) */}
+      <Sidebar
+        isMobileOpen={isMobileSidebarOpen}
+        setIsMobileOpen={setIsMobileSidebarOpen}
+      />
 
-      {/* Conteúdo da Tela Ativa */}
-      <main className="flex-1 pb-16">
-        {activeScreen === 'pdv' && <PdvScreen />}
-        {activeScreen === 'mesas' && <MesasScreen />}
-        {(activeScreen === 'caixa' || (activeScreen as string) === 'caixa_cego') && <CaixaCegoScreen />}
-        {activeScreen === 'cardapio' && <CardapioScreen />}
-        {activeScreen === 'ficha_tecnica' && <FichaTecnicaScreen />}
-        {activeScreen === 'estoque' && <EstoqueScreen />}
-        {activeScreen === 'financeiro' && <FinanceiroScreen />}
-        {activeScreen === 'relatorios' && <RelatoriosScreen />}
-        {activeScreen === 'dicas' && <DicasScreen />}
-        {activeScreen === 'subscription' && <SubscriptionScreen />}
-        {activeScreen === 'admin' && <SuperAdminScreen />}
-        {activeScreen === 'onboarding' && <OnboardingScreen />}
-        {activeScreen === 'login' && <LoginScreen />}
-      </main>
+      {/* Conteúdo Principal à Direita da Sidebar */}
+      <div className="flex-1 lg:pl-64 flex flex-col min-h-screen">
+        <AdminHeader onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)} />
 
-      {/* Modais Globais e Notificações */}
-      <ReceiptModal />
-      <NotificationToast />
+        <main className="flex-1 pb-16">
+          {activeScreen === 'relatorios' && <RelatoriosScreen />}
+          {activeScreen === 'financeiro' && <FinanceiroScreen />}
+          {activeScreen === 'estoque' && <EstoqueScreen />}
+          {activeScreen === 'ficha_tecnica' && <FichaTecnicaScreen />}
+          {activeScreen === 'cardapio' && <CardapioScreen />}
+          {activeScreen === 'dicas' && <DicasScreen />}
+          {activeScreen === 'subscription' && <SubscriptionScreen />}
+          {activeScreen === 'admin' && <SuperAdminScreen />}
+          {activeScreen === 'onboarding' && <OnboardingScreen />}
+          {activeScreen === 'login' && <LoginScreen />}
+          {activeScreen === 'pdv' && <PdvScreen />}
+          {activeScreen === 'mesas' && <MesasScreen />}
+          {(activeScreen === 'caixa' || (activeScreen as string) === 'caixa_cego') && <CaixaCegoScreen />}
+        </main>
+
+        <ReceiptModal />
+        <NotificationToast />
+      </div>
     </div>
   );
 };
