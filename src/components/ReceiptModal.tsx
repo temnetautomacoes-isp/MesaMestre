@@ -8,6 +8,18 @@ export const ReceiptModal: React.FC = () => {
 
   if (!activeReceipt) return null;
 
+  const printSettings = businessConfig.printSettings;
+  const showLogo = (printSettings?.showLogo ?? true) && !!businessConfig.logoUrl;
+  const showName = printSettings?.showName ?? true;
+  const showLegalName = (printSettings?.showLegalName ?? false) && !!businessConfig.legalName;
+  const showCnpj = (printSettings?.showCnpj ?? true) && !!businessConfig.cnpj;
+  const showIe = (printSettings?.showIe ?? false) && !!businessConfig.ie;
+  const showPhone = (printSettings?.showPhone ?? true) && !!businessConfig.phone;
+  const showAddress = (printSettings?.showAddress ?? true) && (!!businessConfig.address || !!businessConfig.neighborhood);
+  const showCityState = (printSettings?.showCityState ?? true) && (!!businessConfig.city || !!businessConfig.state);
+  const showCep = (printSettings?.showCep ?? false) && !!businessConfig.cep;
+  const showFooterMessage = printSettings?.showFooterMessage ?? true;
+
   const handlePrint = () => {
     window.print();
   };
@@ -16,9 +28,22 @@ export const ReceiptModal: React.FC = () => {
     const itemsText = activeReceipt.items
       .map(it => `• ${it.quantity}x ${it.name} - ${formatCurrency(it.price * it.quantity)}`)
       .join('%0A');
+
+    const headerLines: string[] = [];
+    if (showName) headerLines.push(`*${businessConfig.name}*`);
+    if (showLegalName) headerLines.push(businessConfig.legalName!);
+    if (showCnpj) headerLines.push(`CNPJ: ${businessConfig.cnpj}`);
+    if (showPhone) headerLines.push(`Tel: ${businessConfig.phone}`);
+    if (showAddress) headerLines.push(`${businessConfig.address || ''}${businessConfig.neighborhood ? ` - ${businessConfig.neighborhood}` : ''}`);
+    if (showCityState) headerLines.push(`${businessConfig.city || ''} - ${businessConfig.state || ''}`);
     
+    const headerStr = headerLines.length > 0 ? headerLines.join('%0A') + '%0A' : '';
+    const footerStr = showFooterMessage && businessConfig.footerMessage 
+      ? businessConfig.footerMessage 
+      : 'Obrigado pela preferência! Volte sempre!';
+
     const text = `*COMPROVANTE DE PEDIDO #${activeReceipt.orderNumber}*%0A` +
-      `*${businessConfig.name}*%0A` +
+      headerStr +
       `--------------------------------%0A` +
       `*Tipo:* ${activeReceipt.type === 'mesa' ? `Mesa ${activeReceipt.tableNumber}` : 'Balcão'}%0A` +
       `*Cliente:* ${activeReceipt.customerName || 'Cliente'}%0A` +
@@ -32,7 +57,7 @@ export const ReceiptModal: React.FC = () => {
       `*TOTAL:* ${formatCurrency(activeReceipt.total)}%0A` +
       `--------------------------------%0A` +
       `*Pagamento:* ${activeReceipt.payments.map(p => `${p.method.toUpperCase()} ${formatCurrency(p.amount)}`).join(', ')}%0A` +
-      `Obrigado pela preferência! Volte sempre!`;
+      footerStr;
 
     window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
     showToast('WhatsApp Aberto', 'Mensagem formatada com comprovante gerada.');
@@ -66,11 +91,61 @@ export const ReceiptModal: React.FC = () => {
             ref={receiptRef}
             className="w-full max-w-[320px] bg-white p-5 border border-dashed border-slate-300 rounded-lg shadow-sm text-slate-800 font-mono text-xs leading-relaxed"
           >
-            <div className="text-center pb-3 border-b border-dashed border-slate-300">
-              <div className="font-extrabold text-sm uppercase tracking-wider">{businessConfig.name}</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">{businessConfig.city} - {businessConfig.state}</div>
-              <div className="text-[11px] text-slate-500">Tel: {businessConfig.phone}</div>
-              <div className="mt-2 text-[10px] bg-slate-100 py-0.5 px-2 rounded uppercase font-bold text-slate-700">
+            {/* Cabeçalho do Estabelecimento */}
+            <div className="text-center pb-3 border-b border-dashed border-slate-300 space-y-0.5">
+              {/* Logo no topo da nota */}
+              {showLogo && (
+                <div className="flex justify-center pb-2">
+                  <img
+                    src={businessConfig.logoUrl}
+                    alt="Logo da Empresa"
+                    className="max-h-16 max-w-[130px] object-contain"
+                  />
+                </div>
+              )}
+
+              {/* Nome Fantasia */}
+              {showName && (
+                <div className="font-extrabold text-sm uppercase tracking-wider">{businessConfig.name}</div>
+              )}
+
+              {/* Razão Social */}
+              {showLegalName && (
+                <div className="text-[10px] text-slate-600 font-semibold">{businessConfig.legalName}</div>
+              )}
+
+              {/* Documentos Fiscais */}
+              {(showCnpj || showIe) && (
+                <div className="text-[10px] text-slate-500">
+                  {showCnpj && <span>CNPJ: {businessConfig.cnpj}</span>}
+                  {showCnpj && showIe && <span> | </span>}
+                  {showIe && <span>IE: {businessConfig.ie}</span>}
+                </div>
+              )}
+
+              {/* Endereço & Bairro */}
+              {showAddress && (
+                <div className="text-[11px] text-slate-500">
+                  {businessConfig.address}
+                  {businessConfig.neighborhood ? `, ${businessConfig.neighborhood}` : ''}
+                </div>
+              )}
+
+              {/* Cidade, Estado e CEP */}
+              {(showCityState || showCep) && (
+                <div className="text-[11px] text-slate-500">
+                  {showCityState && <span>{businessConfig.city} - {businessConfig.state}</span>}
+                  {showCityState && showCep && <span> - </span>}
+                  {showCep && <span>CEP: {businessConfig.cep}</span>}
+                </div>
+              )}
+
+              {/* Telefone / WhatsApp */}
+              {showPhone && (
+                <div className="text-[11px] text-slate-500">Tel: {businessConfig.phone}</div>
+              )}
+
+              <div className="mt-2 text-[10px] bg-slate-100 py-0.5 px-2 rounded uppercase font-bold text-slate-700 inline-block">
                 Extrato Nº {activeReceipt.orderNumber} - Não Fiscal
               </div>
             </div>
@@ -156,7 +231,11 @@ export const ReceiptModal: React.FC = () => {
             {/* Rodapé */}
             <div className="pt-3 text-center text-[10px] text-slate-500 space-y-1">
               <div>Atendido por: {activeReceipt.cashierName}</div>
-              <div className="font-medium text-slate-600">Obrigado pela preferência! Volte Sempre!</div>
+              {showFooterMessage && (
+                <div className="font-medium text-slate-700">
+                  {businessConfig.footerMessage || 'Obrigado pela preferência! Volte Sempre!'}
+                </div>
+              )}
               <div className="text-[9px] text-slate-400">Sistema MesaMestre - Gestão Gastronômica</div>
             </div>
           </div>

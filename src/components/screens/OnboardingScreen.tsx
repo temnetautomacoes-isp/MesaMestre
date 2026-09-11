@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
-import { BusinessType } from '../../types';
+import { BusinessType, ReceiptPrintSettings } from '../../types';
 import { 
   Building2, 
   Store, 
@@ -20,7 +20,10 @@ import {
   ArrowRight,
   Upload,
   Trash2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Receipt,
+  FileText,
+  MessageSquare
 } from 'lucide-react';
 
 export const OnboardingScreen: React.FC = () => {
@@ -31,14 +34,35 @@ export const OnboardingScreen: React.FC = () => {
   const initialName = businessConfig.name || currentCompany?.name || 'Meu Restaurante';
   const initialLogo = businessConfig.logoUrl || (currentCompany as any)?.logoUrl || '';
 
+  const initialPrintSettings: ReceiptPrintSettings = {
+    showLogo: businessConfig.printSettings?.showLogo ?? true,
+    showName: businessConfig.printSettings?.showName ?? true,
+    showLegalName: businessConfig.printSettings?.showLegalName ?? false,
+    showCnpj: businessConfig.printSettings?.showCnpj ?? true,
+    showIe: businessConfig.printSettings?.showIe ?? false,
+    showPhone: businessConfig.printSettings?.showPhone ?? true,
+    showAddress: businessConfig.printSettings?.showAddress ?? true,
+    showCityState: businessConfig.printSettings?.showCityState ?? true,
+    showCep: businessConfig.printSettings?.showCep ?? false,
+    showFooterMessage: businessConfig.printSettings?.showFooterMessage ?? true,
+  };
+
   const [formData, setFormData] = useState({
     name: initialName,
-    ownerName: businessConfig.ownerName,
+    legalName: businessConfig.legalName || '',
+    cnpj: businessConfig.cnpj || '',
+    ie: businessConfig.ie || '',
+    ownerName: businessConfig.ownerName || '',
     type: businessConfig.type,
-    phone: businessConfig.phone,
-    city: businessConfig.city,
-    state: businessConfig.state,
+    phone: businessConfig.phone || '',
+    address: businessConfig.address || '',
+    neighborhood: businessConfig.neighborhood || '',
+    city: businessConfig.city || '',
+    state: businessConfig.state || '',
+    cep: businessConfig.cep || '',
+    footerMessage: businessConfig.footerMessage || 'Obrigado pela preferência! Volte sempre :)',
     logoUrl: initialLogo,
+    printSettings: initialPrintSettings,
     tableCount: businessConfig.tableCount,
     pixRate: businessConfig.rates.pix,
     debitoRate: businessConfig.rates.debito,
@@ -46,6 +70,16 @@ export const OnboardingScreen: React.FC = () => {
     initialCashDefault: businessConfig.initialCashDefault,
     serviceChargePercentage: businessConfig.serviceChargePercentage
   });
+
+  const togglePrintSetting = (key: keyof ReceiptPrintSettings) => {
+    setFormData(prev => ({
+      ...prev,
+      printSettings: {
+        ...prev.printSettings,
+        [key]: !prev.printSettings[key]
+      }
+    }));
+  };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -80,12 +114,20 @@ export const OnboardingScreen: React.FC = () => {
 
     updateBusinessConfig({
       name: finalName,
+      legalName: formData.legalName.trim() || undefined,
+      cnpj: formData.cnpj.trim() || undefined,
+      ie: formData.ie.trim() || undefined,
       ownerName: formData.ownerName,
       type: formData.type,
       phone: formData.phone,
+      address: formData.address.trim() || undefined,
+      neighborhood: formData.neighborhood.trim() || undefined,
       city: formData.city,
       state: formData.state,
+      cep: formData.cep.trim() || undefined,
+      footerMessage: formData.footerMessage.trim() || undefined,
       logoUrl: finalLogo,
+      printSettings: formData.printSettings,
       tableCount: Number(formData.tableCount),
       rates: {
         pix: Number(formData.pixRate),
@@ -108,7 +150,7 @@ export const OnboardingScreen: React.FC = () => {
       logoUrl: finalLogo
     });
 
-    showToast('Alterações Salvas!', 'As configurações do seu estabelecimento foram atualizadas com sucesso.');
+    showToast('Alterações Salvas!', 'As configurações do seu estabelecimento e impressão de nota foram atualizadas com sucesso.');
   };
 
   return (
@@ -171,153 +213,402 @@ export const OnboardingScreen: React.FC = () => {
             </div>
           </div>
 
-          {/* Passo 2: Dados Básicos */}
+          {/* Passo 2: Dados Básicos & Impressão da Notinha */}
           <div className="pt-6 border-t border-slate-100">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-4">
-              2. Nome e Contato do Estabelecimento
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Nome Fantasia do Restaurante/Bar</label>
-                <div className="relative">
-                  <Building2 className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                  2. Dados da Empresa & Impressão na Notinha
+                </label>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Preencha as informações do seu negócio e marque abaixo de cada item o que deve ser impresso no cupom do cliente.
+                </p>
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 rounded-full text-xs font-bold shrink-0 self-start sm:self-auto border border-emerald-200/60">
+                <Receipt className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Personalização da Notinha Ativa</span>
+              </div>
+            </div>
+
+            {/* Upload da Logo da Marca */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 mb-6">
+              <label className="block text-xs font-bold text-slate-700 mb-2">
+                Logo da Marca da Empresa <span className="text-slate-400 font-normal">(Recomendado: PNG com fundo transparente ou JPG)</span>
+              </label>
+
+              {/* Input Invisível para Upload de Arquivo */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                onChange={handleLogoUpload}
+                className="hidden"
+              />
+
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                {/* Visualizador / Preview da Logo */}
+                {formData.logoUrl ? (
+                  <div className="relative w-20 h-20 rounded-2xl bg-white border border-slate-200 shadow-sm p-1.5 flex items-center justify-center shrink-0 overflow-hidden group">
+                    <img
+                      src={formData.logoUrl}
+                      alt="Logo do Restaurante"
+                      className="w-full h-full object-contain rounded-xl"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-[#10B981] to-[#0E7490] flex items-center justify-center text-white font-extrabold text-xl shadow-sm shrink-0 border border-emerald-400/40">
+                    {formData.name ? formData.name.substring(0, 2).toUpperCase() : 'MM'}
+                  </div>
+                )}
+
+                {/* Ações de Upload e Checkbox */}
+                <div className="space-y-2.5 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-4 py-2.5 rounded-xl bg-[#1E4B75] hover:bg-[#255e94] text-white text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-sm"
+                    >
+                      <Upload className="w-4 h-4" />
+                      <span>{formData.logoUrl ? 'Trocar Imagem (PNG/JPG)' : 'Fazer Upload da Logo (PNG)'}</span>
+                    </button>
+
+                    {formData.logoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, logoUrl: '' }))}
+                        className="px-3.5 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span>Remover</span>
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Checkbox: Aparecer na nota? */}
+                  <label className="inline-flex items-center gap-2 cursor-pointer select-none group">
+                    <input
+                      type="checkbox"
+                      checked={formData.printSettings.showLogo}
+                      onChange={() => togglePrintSetting('showLogo')}
+                      className="w-4 h-4 text-emerald-600 rounded-md border-slate-300 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer accent-emerald-600"
+                    />
+                    <span className={`text-xs font-medium transition-colors ${formData.printSettings.showLogo ? 'text-emerald-700 font-semibold' : 'text-slate-500 group-hover:text-slate-700'}`}>
+                      Aparecer na nota? (Exibir logo no topo do cupom impresso)
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Grid com Todos os Campos e Seus Respectivos Checkboxes */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              
+              {/* Nome Fantasia */}
+              <div className="flex flex-col justify-between p-3.5 bg-slate-50/70 rounded-2xl border border-slate-200">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Nome Fantasia do Restaurante/Bar *</label>
+                  <div className="relative">
+                    <Building2 className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                    <input
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full pl-10 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden shadow-xs"
+                      placeholder="Ex: Boteco Sabor da Vila"
+                    />
+                  </div>
+                </div>
+                <label className="inline-flex items-center gap-2 mt-2.5 cursor-pointer select-none group">
+                  <input
+                    type="checkbox"
+                    checked={formData.printSettings.showName}
+                    onChange={() => togglePrintSetting('showName')}
+                    className="w-4 h-4 text-emerald-600 rounded-md border-slate-300 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer accent-emerald-600"
+                  />
+                  <span className={`text-xs font-medium transition-colors ${formData.printSettings.showName ? 'text-emerald-700 font-semibold' : 'text-slate-500 group-hover:text-slate-700'}`}>
+                    Aparecer na nota?
+                  </span>
+                </label>
+              </div>
+
+              {/* Razão Social */}
+              <div className="flex flex-col justify-between p-3.5 bg-slate-50/70 rounded-2xl border border-slate-200">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Razão Social / Nome Jurídico</label>
+                  <div className="relative">
+                    <FileText className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                    <input
+                      type="text"
+                      value={formData.legalName}
+                      onChange={e => setFormData(prev => ({ ...prev, legalName: e.target.value }))}
+                      className="w-full pl-10 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden shadow-xs"
+                      placeholder="Ex: Silva & Santos Gastronomia Ltda"
+                    />
+                  </div>
+                </div>
+                <label className="inline-flex items-center gap-2 mt-2.5 cursor-pointer select-none group">
+                  <input
+                    type="checkbox"
+                    checked={formData.printSettings.showLegalName}
+                    onChange={() => togglePrintSetting('showLegalName')}
+                    className="w-4 h-4 text-emerald-600 rounded-md border-slate-300 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer accent-emerald-600"
+                  />
+                  <span className={`text-xs font-medium transition-colors ${formData.printSettings.showLegalName ? 'text-emerald-700 font-semibold' : 'text-slate-500 group-hover:text-slate-700'}`}>
+                    Aparecer na nota?
+                  </span>
+                </label>
+              </div>
+
+              {/* CNPJ / CPF */}
+              <div className="flex flex-col justify-between p-3.5 bg-slate-50/70 rounded-2xl border border-slate-200">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">CNPJ ou CPF</label>
+                  <input
+                    type="text"
+                    value={formData.cnpj}
+                    onChange={e => setFormData(prev => ({ ...prev, cnpj: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden shadow-xs"
+                    placeholder="Ex: 12.345.678/0001-90"
+                  />
+                </div>
+                <label className="inline-flex items-center gap-2 mt-2.5 cursor-pointer select-none group">
+                  <input
+                    type="checkbox"
+                    checked={formData.printSettings.showCnpj}
+                    onChange={() => togglePrintSetting('showCnpj')}
+                    className="w-4 h-4 text-emerald-600 rounded-md border-slate-300 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer accent-emerald-600"
+                  />
+                  <span className={`text-xs font-medium transition-colors ${formData.printSettings.showCnpj ? 'text-emerald-700 font-semibold' : 'text-slate-500 group-hover:text-slate-700'}`}>
+                    Aparecer na nota?
+                  </span>
+                </label>
+              </div>
+
+              {/* Inscrição Estadual (IE) */}
+              <div className="flex flex-col justify-between p-3.5 bg-slate-50/70 rounded-2xl border border-slate-200">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Inscrição Estadual (IE)</label>
+                  <input
+                    type="text"
+                    value={formData.ie}
+                    onChange={e => setFormData(prev => ({ ...prev, ie: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden shadow-xs"
+                    placeholder="Ex: 123.456.789.000"
+                  />
+                </div>
+                <label className="inline-flex items-center gap-2 mt-2.5 cursor-pointer select-none group">
+                  <input
+                    type="checkbox"
+                    checked={formData.printSettings.showIe}
+                    onChange={() => togglePrintSetting('showIe')}
+                    className="w-4 h-4 text-emerald-600 rounded-md border-slate-300 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer accent-emerald-600"
+                  />
+                  <span className={`text-xs font-medium transition-colors ${formData.printSettings.showIe ? 'text-emerald-700 font-semibold' : 'text-slate-500 group-hover:text-slate-700'}`}>
+                    Aparecer na nota?
+                  </span>
+                </label>
+              </div>
+
+              {/* WhatsApp / Telefone */}
+              <div className="flex flex-col justify-between p-3.5 bg-slate-50/70 rounded-2xl border border-slate-200">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">WhatsApp / Telefone para Pedidos</label>
+                  <div className="relative">
+                    <Phone className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                    <input
+                      type="text"
+                      value={formData.phone}
+                      onChange={e => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                      className="w-full pl-10 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden shadow-xs"
+                      placeholder="(19) 99876-5432"
+                    />
+                  </div>
+                </div>
+                <label className="inline-flex items-center gap-2 mt-2.5 cursor-pointer select-none group">
+                  <input
+                    type="checkbox"
+                    checked={formData.printSettings.showPhone}
+                    onChange={() => togglePrintSetting('showPhone')}
+                    className="w-4 h-4 text-emerald-600 rounded-md border-slate-300 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer accent-emerald-600"
+                  />
+                  <span className={`text-xs font-medium transition-colors ${formData.printSettings.showPhone ? 'text-emerald-700 font-semibold' : 'text-slate-500 group-hover:text-slate-700'}`}>
+                    Aparecer na nota?
+                  </span>
+                </label>
+              </div>
+
+              {/* Endereço (Rua e Número) & Bairro */}
+              <div className="flex flex-col justify-between p-3.5 bg-slate-50/70 rounded-2xl border border-slate-200 sm:col-span-2 lg:col-span-1">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Endereço (Rua, Número, Bairro)</label>
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <MapPin className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                      <input
+                        type="text"
+                        value={formData.address}
+                        onChange={e => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                        className="w-full pl-10 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden shadow-xs"
+                        placeholder="Rua Nove de Julho, 1420"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      value={formData.neighborhood}
+                      onChange={e => setFormData(prev => ({ ...prev, neighborhood: e.target.value }))}
+                      className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden shadow-xs"
+                      placeholder="Bairro (Ex: Centro)"
+                    />
+                  </div>
+                </div>
+                <label className="inline-flex items-center gap-2 mt-2.5 cursor-pointer select-none group">
+                  <input
+                    type="checkbox"
+                    checked={formData.printSettings.showAddress}
+                    onChange={() => togglePrintSetting('showAddress')}
+                    className="w-4 h-4 text-emerald-600 rounded-md border-slate-300 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer accent-emerald-600"
+                  />
+                  <span className={`text-xs font-medium transition-colors ${formData.printSettings.showAddress ? 'text-emerald-700 font-semibold' : 'text-slate-500 group-hover:text-slate-700'}`}>
+                    Aparecer na nota?
+                  </span>
+                </label>
+              </div>
+
+              {/* Cidade e Estado (UF) */}
+              <div className="flex flex-col justify-between p-3.5 bg-slate-50/70 rounded-2xl border border-slate-200">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Cidade e UF</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-2">
+                      <input
+                        type="text"
+                        value={formData.city}
+                        onChange={e => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden shadow-xs"
+                        placeholder="Cidade"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="text"
+                        maxLength={2}
+                        value={formData.state}
+                        onChange={e => setFormData(prev => ({ ...prev, state: e.target.value.toUpperCase() }))}
+                        className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden uppercase text-center shadow-xs"
+                        placeholder="UF"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <label className="inline-flex items-center gap-2 mt-2.5 cursor-pointer select-none group">
+                  <input
+                    type="checkbox"
+                    checked={formData.printSettings.showCityState}
+                    onChange={() => togglePrintSetting('showCityState')}
+                    className="w-4 h-4 text-emerald-600 rounded-md border-slate-300 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer accent-emerald-600"
+                  />
+                  <span className={`text-xs font-medium transition-colors ${formData.printSettings.showCityState ? 'text-emerald-700 font-semibold' : 'text-slate-500 group-hover:text-slate-700'}`}>
+                    Aparecer na nota?
+                  </span>
+                </label>
+              </div>
+
+              {/* CEP */}
+              <div className="flex flex-col justify-between p-3.5 bg-slate-50/70 rounded-2xl border border-slate-200">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">CEP</label>
+                  <input
+                    type="text"
+                    value={formData.cep}
+                    onChange={e => setFormData(prev => ({ ...prev, cep: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden shadow-xs"
+                    placeholder="14800-000"
+                  />
+                </div>
+                <label className="inline-flex items-center gap-2 mt-2.5 cursor-pointer select-none group">
+                  <input
+                    type="checkbox"
+                    checked={formData.printSettings.showCep}
+                    onChange={() => togglePrintSetting('showCep')}
+                    className="w-4 h-4 text-emerald-600 rounded-md border-slate-300 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer accent-emerald-600"
+                  />
+                  <span className={`text-xs font-medium transition-colors ${formData.printSettings.showCep ? 'text-emerald-700 font-semibold' : 'text-slate-500 group-hover:text-slate-700'}`}>
+                    Aparecer na nota?
+                  </span>
+                </label>
+              </div>
+
+              {/* Nome do Gestor */}
+              <div className="flex flex-col justify-between p-3.5 bg-slate-50/70 rounded-2xl border border-slate-200">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Nome do Proprietário(a) / Gestor *</label>
                   <input
                     type="text"
                     required
-                    value={formData.name}
-                    onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:bg-white focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden"
-                    placeholder="Ex: Boteco Sabor da Vila"
+                    value={formData.ownerName}
+                    onChange={e => setFormData(prev => ({ ...prev, ownerName: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden shadow-xs"
+                    placeholder="Ex: Carlos Silva"
                   />
                 </div>
+                <p className="text-[11px] text-slate-400 mt-2.5">
+                  Responsável pela operação no sistema
+                </p>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Nome do Proprietário(a) / Gestor</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.ownerName}
-                  onChange={e => setFormData(prev => ({ ...prev, ownerName: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:bg-white focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden"
-                  placeholder="Ex: Carlos Silva"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">WhatsApp / Telefone para Pedidos</label>
-                <div className="relative">
-                  <Phone className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
-                  <input
-                    type="text"
-                    value={formData.phone}
-                    onChange={e => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:bg-white focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden"
-                    placeholder="(19) 99876-5432"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Cidade</label>
-                <div className="relative">
-                  <MapPin className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={e => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:bg-white focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden"
-                    placeholder="Araraquara"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Estado (UF)</label>
-                <input
-                  type="text"
-                  maxLength={2}
-                  value={formData.state}
-                  onChange={e => setFormData(prev => ({ ...prev, state: e.target.value.toUpperCase() }))}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:bg-white focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden uppercase"
-                  placeholder="SP"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Número de Mesas no Salão</label>
-                <div className="relative">
-                  <LayoutGrid className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
-                  <input
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={formData.tableCount}
-                    onChange={e => setFormData(prev => ({ ...prev, tableCount: Number(e.target.value) }))}
-                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:bg-white focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden"
-                  />
-                </div>
-              </div>
-
-              <div className="sm:col-span-2 lg:col-span-3">
-                <label className="block text-xs font-semibold text-slate-700 mb-2">
-                  Logo da Marca do Restaurante <span className="text-slate-400 font-normal">(Recomendado: imagem PNG com fundo transparente ou JPG)</span>
-                </label>
-                
-                {/* Input Invisível para Upload de Arquivo */}
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
-                  onChange={handleLogoUpload}
-                  className="hidden"
-                />
-
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                  {/* Visualizador / Preview da Logo */}
-                  {formData.logoUrl ? (
-                    <div className="relative w-20 h-20 rounded-2xl bg-white border border-slate-200 shadow-sm p-1.5 flex items-center justify-center shrink-0 overflow-hidden group">
-                      <img
-                        src={formData.logoUrl}
-                        alt="Logo do Restaurante"
-                        className="w-full h-full object-contain rounded-xl"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-[#10B981] to-[#0E7490] flex items-center justify-center text-white font-extrabold text-xl shadow-sm shrink-0 border border-emerald-400/40">
-                      {formData.name ? formData.name.substring(0, 2).toUpperCase() : 'MM'}
-                    </div>
-                  )}
-
-                  {/* Ações de Upload e Informações */}
-                  <div className="space-y-2 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="px-4 py-2.5 rounded-xl bg-[#1E4B75] hover:bg-[#255e94] text-white text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-sm"
-                      >
-                        <Upload className="w-4 h-4" />
-                        <span>{formData.logoUrl ? 'Trocar Imagem (PNG/JPG)' : 'Fazer Upload da Logo (PNG)'}</span>
-                      </button>
-
-                      {formData.logoUrl && (
-                        <button
-                          type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, logoUrl: '' }))}
-                          className="px-3.5 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          <span>Remover</span>
-                        </button>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-slate-500 leading-relaxed">
-                      Esta foto/logo aparecerá no topo do menu lateral (Sidebar), no portal inicial e no cabeçalho das impressões.
-                    </p>
+              {/* Mesas no Salão */}
+              <div className="flex flex-col justify-between p-3.5 bg-slate-50/70 rounded-2xl border border-slate-200">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Número de Mesas no Salão *</label>
+                  <div className="relative">
+                    <LayoutGrid className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                    <input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={formData.tableCount}
+                      onChange={e => setFormData(prev => ({ ...prev, tableCount: Number(e.target.value) }))}
+                      className="w-full pl-10 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden shadow-xs"
+                    />
                   </div>
                 </div>
+                <p className="text-[11px] text-slate-400 mt-2.5">
+                  Mesas ativas no salão
+                </p>
               </div>
+
+              {/* Mensagem de Rodapé da Notinha / Agradecimento */}
+              <div className="flex flex-col justify-between p-3.5 bg-slate-50/70 rounded-2xl border border-slate-200 sm:col-span-2 lg:col-span-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Mensagem de Rodapé / Agradecimento / Senha Wi-Fi da Nota
+                  </label>
+                  <div className="relative">
+                    <MessageSquare className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                    <input
+                      type="text"
+                      value={formData.footerMessage}
+                      onChange={e => setFormData(prev => ({ ...prev, footerMessage: e.target.value }))}
+                      className="w-full pl-10 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:border-[#1E4B75] focus:ring-1 focus:ring-[#1E4B75] outline-hidden shadow-xs"
+                      placeholder="Ex: Obrigado pela preferência! Volte sempre :) Wi-Fi: SaborDaVila / Senha: 123"
+                    />
+                  </div>
+                </div>
+                <label className="inline-flex items-center gap-2 mt-2.5 cursor-pointer select-none group">
+                  <input
+                    type="checkbox"
+                    checked={formData.printSettings.showFooterMessage}
+                    onChange={() => togglePrintSetting('showFooterMessage')}
+                    className="w-4 h-4 text-emerald-600 rounded-md border-slate-300 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer accent-emerald-600"
+                  />
+                  <span className={`text-xs font-medium transition-colors ${formData.printSettings.showFooterMessage ? 'text-emerald-700 font-semibold' : 'text-slate-500 group-hover:text-slate-700'}`}>
+                    Aparecer na nota?
+                  </span>
+                </label>
+              </div>
+
             </div>
           </div>
 

@@ -105,14 +105,35 @@ export type BusinessType =
   | 'pizzaria'
   | 'outro';
 
+export interface ReceiptPrintSettings {
+  showLogo: boolean;
+  showName: boolean;
+  showLegalName: boolean;
+  showCnpj: boolean;
+  showIe: boolean;
+  showPhone: boolean;
+  showAddress: boolean;
+  showCityState: boolean;
+  showCep: boolean;
+  showFooterMessage: boolean;
+}
+
 export interface BusinessConfig {
   name: string;
+  legalName?: string;         // Razão Social
+  cnpj?: string;              // CNPJ / CPF
+  ie?: string;                // Inscrição Estadual
   ownerName: string;
   type: BusinessType;
   phone: string;
+  address?: string;           // Rua, Número
+  neighborhood?: string;      // Bairro
   city: string;
   state: string;
+  cep?: string;               // CEP
+  footerMessage?: string;     // Mensagem de agradecimento / rodapé
   logoUrl?: string;
+  printSettings?: ReceiptPrintSettings;
   tableCount: number;
   rates: {
     pix: number;       // e.g. 0%
