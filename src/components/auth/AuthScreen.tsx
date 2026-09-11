@@ -235,19 +235,12 @@ export const AuthScreen: React.FC<{ initialMode?: 'login' | 'register' | 'forgot
 
             {/* Header do Card */}
             <div className="mb-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-white">
-                  {mode === 'login' && 'Bem-vindo ao MesaMestre'}
-                  {mode === 'register' && 'Criar minha conta'}
-                  {mode === 'forgot' && 'Recuperar minha senha'}
-                  {mode === 'reset' && 'Definir nova senha'}
-                </h3>
-                {mode === 'login' && (
-                  <span className="text-xs bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-full font-semibold">
-                    Acesso Seguro
-                  </span>
-                )}
-              </div>
+              <h3 className="text-xl font-bold text-white">
+                {mode === 'login' && 'Bem-vindo ao MesaMestre'}
+                {mode === 'register' && 'Criar minha conta'}
+                {mode === 'forgot' && 'Recuperar minha senha'}
+                {mode === 'reset' && 'Definir nova senha'}
+              </h3>
               <p className="text-xs text-slate-300 mt-1">
                 {mode === 'login' && 'Informe seu e-mail e senha para acessar o sistema.'}
                 {mode === 'register' && 'Cadastre seu restaurante e comece seu teste gratuito de 7 dias.'}
