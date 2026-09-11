@@ -27,6 +27,8 @@ export const PdvScreen: React.FC = () => {
     businessConfig, 
     formatCurrency, 
     finalizeQuickSale, 
+    closeTableOrder,
+    removeItemFromTable,
     addItemToTable, 
     tableOrders, 
     showToast 
@@ -47,8 +49,9 @@ export const PdvScreen: React.FC = () => {
   const [itemNote, setItemNote] = useState<string>('');
   const [selectedOption, setSelectedOption] = useState<string>('');
 
-  // Bill split
+  // Bill split & Service Charge
   const [splitCount, setSplitCount] = useState<number>(1);
+  const [includeService, setIncludeService] = useState<boolean>(true);
 
   // Payment Drawer
   const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(false);
@@ -66,14 +69,30 @@ export const PdvScreen: React.FC = () => {
     });
   }, [menuItems, selectedCategory, searchTerm]);
 
-  // Cart calculations
-  const subtotal = useMemo(() => {
-    return cartItems.reduce((sum, it) => sum + (it.price * it.quantity), 0);
-  }, [cartItems]);
+  // Current active items (either Balcão cart or Mesa items)
+  const isMesa = orderDestination !== 'balcao';
+  const currentTableNumber = typeof orderDestination === 'number' ? orderDestination : null;
+  const currentTableOrder = currentTableNumber ? tableOrders[currentTableNumber] : null;
+  const currentTableItems = currentTableOrder?.items || [];
 
+  // Subtotal calculations
+  const subtotal = useMemo(() => {
+    if (orderDestination === 'balcao') {
+      return cartItems.reduce((sum, it) => sum + (it.price * it.quantity), 0);
+    }
+    return currentTableItems.reduce((sum, it) => sum + (it.price * it.quantity), 0);
+  }, [orderDestination, cartItems, currentTableItems]);
+
+  // Service Fee calculation (for tables)
+  const serviceFee = useMemo(() => {
+    if (orderDestination === 'balcao' || !includeService) return 0;
+    return subtotal * ((businessConfig.serviceChargePercentage || 0) / 100);
+  }, [orderDestination, includeService, subtotal, businessConfig.serviceChargePercentage]);
+
+  // Total
   const total = useMemo(() => {
-    return Math.max(0, subtotal - discountAmount);
-  }, [subtotal, discountAmount]);
+    return Math.max(0, subtotal - discountAmount + serviceFee);
+  }, [subtotal, discountAmount, serviceFee]);
 
   const splitValue = useMemo(() => {
     return splitCount > 0 ? (total / splitCount) : total;
@@ -145,32 +164,61 @@ export const PdvScreen: React.FC = () => {
     setCartItems(prev => prev.filter(it => it.id !== id));
   };
 
-  const handleFinishQuickSale = () => {
-    if (cartItems.length === 0) {
-      showToast('Pedido Vazio', 'Adicione pelo menos um item ao pedido.', 'warning');
-      return;
-    }
-
-    const receivedNum = parseFloat(receivedCashAmount.replace(',', '.')) || total;
-
-    const payments: PaymentRecord[] = [
-      {
-        method: paymentMethod,
-        amount: total,
-        receivedAmount: paymentMethod === 'dinheiro' ? receivedNum : total,
-        change: paymentMethod === 'dinheiro' ? cashChange : 0,
+  const handleFinishSale = () => {
+    if (orderDestination === 'balcao') {
+      if (cartItems.length === 0) {
+        showToast('Pedido Vazio', 'Adicione pelo menos um item ao pedido.', 'warning');
+        return;
       }
-    ];
 
-    finalizeQuickSale(cartItems, payments, customerName, discountAmount);
+      const receivedNum = parseFloat(receivedCashAmount.replace(',', '.')) || total;
 
-    // Reset state
-    setCartItems([]);
-    setCustomerName('');
-    setIsCheckoutOpen(false);
-    setReceivedCashAmount('');
-    setDiscountAmount(0);
-    setSplitCount(1);
+      const payments: PaymentRecord[] = [
+        {
+          method: paymentMethod,
+          amount: total,
+          receivedAmount: paymentMethod === 'dinheiro' ? receivedNum : total,
+          change: paymentMethod === 'dinheiro' ? cashChange : 0,
+        }
+      ];
+
+      finalizeQuickSale(cartItems, payments, customerName, discountAmount);
+
+      // Reset state
+      setCartItems([]);
+      setCustomerName('');
+      setIsCheckoutOpen(false);
+      setReceivedCashAmount('');
+      setDiscountAmount(0);
+      setSplitCount(1);
+    } else {
+      // Fechamento de Comanda da Mesa
+      if (!currentTableNumber || currentTableItems.length === 0) {
+        showToast('Mesa Vazia', 'Não há itens lançados nesta comanda para fechar.', 'warning');
+        return;
+      }
+
+      const receivedNum = parseFloat(receivedCashAmount.replace(',', '.')) || total;
+
+      const payments: PaymentRecord[] = [
+        {
+          method: paymentMethod,
+          amount: total,
+          receivedAmount: paymentMethod === 'dinheiro' ? receivedNum : total,
+          change: paymentMethod === 'dinheiro' ? cashChange : 0,
+        }
+      ];
+
+      closeTableOrder(currentTableNumber, payments, discountAmount, includeService);
+
+      // Reset state e retorna para o balcão
+      setIsCheckoutOpen(false);
+      setReceivedCashAmount('');
+      setDiscountAmount(0);
+      setSplitCount(1);
+      setOrderDestination('balcao');
+      showToast('Conta Fechada', `Mesa ${currentTableNumber} finalizada com sucesso!`);
+    }
   };
 
   return (
@@ -317,12 +365,19 @@ export const PdvScreen: React.FC = () => {
           <div className="p-3.5 border-b border-slate-100 bg-slate-50/60 rounded-t-2xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#0F2537] text-white flex items-center justify-center font-black text-xs">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${
+                  isMesa ? 'bg-[#10B981] text-white shadow-xs' : 'bg-[#0F2537] text-white'
+                }`}>
                   {orderDestination === 'balcao' ? <ShoppingBag className="w-4 h-4" /> : `#${orderDestination}`}
                 </div>
                 <div>
-                  <h2 className="text-sm font-black text-[#0F2537]">
-                    {orderDestination === 'balcao' ? 'Venda Balcão Rápido' : `Mesa ${orderDestination}`}
+                  <h2 className="text-sm font-black text-[#0F2537] flex items-center gap-1.5">
+                    <span>{orderDestination === 'balcao' ? 'Venda Balcão Rápido' : `Mesa ${orderDestination}`}</span>
+                    {isMesa && currentTableOrder?.customerName && (
+                      <span className="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.2 rounded-md font-semibold">
+                        {currentTableOrder.customerName}
+                      </span>
+                    )}
                   </h2>
                   <p className="text-[11px] text-slate-500">
                     {orderDestination === 'balcao' ? 'Pedido para levar ou consumo no balcão' : 'Lançamento direto na comanda'}
@@ -330,18 +385,28 @@ export const PdvScreen: React.FC = () => {
                 </div>
               </div>
 
-              {orderDestination === 'balcao' && cartItems.length > 0 && (
+              {orderDestination === 'balcao' ? (
+                cartItems.length > 0 && (
+                  <button
+                    onClick={() => setCartItems([])}
+                    className="text-xs text-rose-600 hover:text-rose-800 font-semibold p-1 cursor-pointer"
+                    title="Limpar pedido"
+                  >
+                    Limpar
+                  </button>
+                )
+              ) : (
                 <button
-                  onClick={() => setCartItems([])}
-                  className="text-xs text-rose-600 hover:text-rose-800 font-semibold p-1 cursor-pointer"
-                  title="Limpar pedido"
+                  onClick={() => setOrderDestination('balcao')}
+                  className="text-xs text-slate-500 hover:text-slate-800 font-bold px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                  title="Voltar ao Balcão"
                 >
-                  Limpar
+                  Ir ao Balcão
                 </button>
               )}
             </div>
 
-            {/* Nome do Cliente (Opcional) */}
+            {/* Nome do Cliente (Opcional no Balcão) */}
             {orderDestination === 'balcao' && (
               <div className="mt-2.5">
                 <input
@@ -409,90 +474,149 @@ export const PdvScreen: React.FC = () => {
             ) : (
               // Mostra os itens já gravados na mesa selecionada
               <div className="space-y-2">
-                <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 font-medium">
-                  Itens clicados ao lado entram direto na <strong>Mesa {orderDestination}</strong>!
+                <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 font-medium flex items-center justify-between">
+                  <span>Itens clicados ao lado entram direto na <strong>Mesa {orderDestination}</strong>!</span>
+                  <span className="font-bold bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-md text-[10px]">
+                    {currentTableItems.length} {currentTableItems.length === 1 ? 'item' : 'itens'}
+                  </span>
                 </div>
-                {tableOrders[orderDestination]?.items.map((it) => (
-                  <div key={it.id} className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
-                    <div>
-                      <div className="font-bold text-slate-800">{it.name}</div>
-                      <div className="text-[10px] text-slate-500">{it.quantity}x {formatCurrency(it.price)}</div>
-                    </div>
-                    <div className="font-black text-emerald-700">
-                      {formatCurrency(it.price * it.quantity)}
-                    </div>
+
+                {currentTableItems.length === 0 ? (
+                  <div className="py-8 text-center text-slate-400">
+                    <p className="text-xs font-bold text-slate-600">Mesa {orderDestination} sem pedidos ainda</p>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Clique nos produtos do cardápio ao lado para lançar nesta mesa.
+                    </p>
                   </div>
-                ))}
+                ) : (
+                  currentTableItems.map((it) => (
+                    <div key={it.id} className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-slate-800 truncate">{it.name}</div>
+                        <div className="text-[10px] text-slate-500">
+                          {it.quantity}x {formatCurrency(it.price)}
+                          {it.notes && <span className="italic text-amber-700 ml-1">({it.notes})</span>}
+                          {it.selectedOptions && <span className="text-blue-700 ml-1">({it.selectedOptions.join(', ')})</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="font-black text-emerald-700">
+                          {formatCurrency(it.price * it.quantity)}
+                        </div>
+                        <button
+                          onClick={() => removeItemFromTable(orderDestination as number, it.id)}
+                          className="w-5 h-5 rounded-md text-rose-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition cursor-pointer"
+                          title="Remover item da mesa"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>
 
-          {/* Rodapé de Fechamento / Divisão de Conta */}
-          {orderDestination === 'balcao' && (
-            <div className="p-3.5 bg-slate-50 border-t border-slate-200 rounded-b-2xl space-y-3">
-              {/* Divisor de Conta Rápido */}
-              <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-200">
-                <div className="flex items-center gap-1.5 text-slate-600 font-semibold">
-                  <Users className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Dividir Conta:</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  {[1, 2, 3, 4, 5].map((num) => (
-                    <button
-                      key={num}
-                      onClick={() => setSplitCount(num)}
-                      className={`w-6 h-6 rounded-lg text-xs font-bold transition cursor-pointer ${
-                        splitCount === num
-                          ? 'bg-[#1E4B75] text-white shadow-xs'
-                          : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      {num}
-                    </button>
-                  ))}
-                </div>
+          {/* Rodapé de Fechamento / Divisão de Conta (Para Balcão e Mesa) */}
+          <div className="p-3.5 bg-slate-50 border-t border-slate-200 rounded-b-2xl space-y-2.5">
+            {/* Divisor de Conta Rápido */}
+            <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-200">
+              <div className="flex items-center gap-1.5 text-slate-600 font-semibold">
+                <Users className="w-3.5 h-3.5 text-slate-500" />
+                <span>Dividir Conta:</span>
               </div>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5, 6].map((num) => (
+                  <button
+                    key={num}
+                    onClick={() => setSplitCount(num)}
+                    className={`w-6 h-6 rounded-lg text-xs font-bold transition cursor-pointer ${
+                      splitCount === num
+                        ? 'bg-[#1E4B75] text-white shadow-xs'
+                        : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {num}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-              {splitCount > 1 && (
-                <div className="flex justify-between items-center text-xs bg-blue-50 text-blue-900 px-3 py-1.5 rounded-xl border border-blue-200 font-bold">
-                  <span>Por pessoa ({splitCount}x):</span>
-                  <span>{formatCurrency(splitValue)}</span>
+            {splitCount > 1 && (
+              <div className="flex justify-between items-center text-xs bg-blue-50 text-blue-900 px-3 py-1.5 rounded-xl border border-blue-200 font-bold">
+                <span>Por pessoa ({splitCount}x):</span>
+                <span>{formatCurrency(splitValue)}</span>
+              </div>
+            )}
+
+            {/* Toggle Taxa de Serviço 10% para Mesas */}
+            {isMesa && (businessConfig.serviceChargePercentage || 0) > 0 && (
+              <div className="flex items-center justify-between text-xs py-1.5 px-2.5 bg-emerald-50/70 rounded-xl border border-emerald-200/70">
+                <span className="text-emerald-900 font-semibold text-[11px]">
+                  Taxa de Serviço ({businessConfig.serviceChargePercentage}%):
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIncludeService(!includeService)}
+                  className={`px-2 py-0.5 rounded-lg text-[10.5px] font-bold transition cursor-pointer ${
+                    includeService
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                  }`}
+                >
+                  {includeService ? `Ativada (+${formatCurrency(serviceFee)})` : 'Desativada (0%)'}
+                </button>
+              </div>
+            )}
+
+            {/* Subtotal & Total */}
+            <div className="space-y-1 text-xs">
+              <div className="flex justify-between text-slate-600">
+                <span>Subtotal dos Itens:</span>
+                <span className="font-medium">{formatCurrency(subtotal)}</span>
+              </div>
+              {isMesa && includeService && serviceFee > 0 && (
+                <div className="flex justify-between text-slate-600">
+                  <span>Serviço ({businessConfig.serviceChargePercentage}%):</span>
+                  <span>{formatCurrency(serviceFee)}</span>
                 </div>
               )}
-
-              {/* Subtotal & Total */}
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between text-slate-600">
-                  <span>Subtotal:</span>
-                  <span className="font-medium">{formatCurrency(subtotal)}</span>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-rose-600 font-medium">
+                  <span>Desconto:</span>
+                  <span>-{formatCurrency(discountAmount)}</span>
                 </div>
-                {discountAmount > 0 && (
-                  <div className="flex justify-between text-rose-600 font-medium">
-                    <span>Desconto:</span>
-                    <span>-{formatCurrency(discountAmount)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-base font-black text-[#0F2537] pt-1 border-t border-slate-200">
-                  <span>Total a Pagar:</span>
-                  <span className="text-emerald-700">{formatCurrency(total)}</span>
-                </div>
+              )}
+              <div className="flex justify-between text-base font-black text-[#0F2537] pt-1 border-t border-slate-200">
+                <span>{isMesa ? `Total Mesa ${orderDestination}:` : 'Total a Pagar:'}</span>
+                <span className="text-emerald-700">{formatCurrency(total)}</span>
               </div>
-
-              {/* Botão de Pagamento */}
-              <button
-                disabled={cartItems.length === 0}
-                onClick={() => setIsCheckoutOpen(true)}
-                className={`w-full py-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-md transition cursor-pointer ${
-                  cartItems.length > 0
-                    ? 'bg-[#10B981] hover:bg-[#0ea571] text-white shadow-emerald-900/20 active:scale-98'
-                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                }`}
-              >
-                <CreditCard className="w-4 h-4" />
-                <span>Cobrar / Finalizar Pedido</span>
-              </button>
             </div>
-          )}
+
+            {/* Botão de Fechamento / Cobrança */}
+            <button
+              disabled={isMesa ? currentTableItems.length === 0 : cartItems.length === 0}
+              onClick={() => setIsCheckoutOpen(true)}
+              className={`w-full py-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-md transition cursor-pointer ${
+                (isMesa ? currentTableItems.length > 0 : cartItems.length > 0)
+                  ? 'bg-[#10B981] hover:bg-[#0ea571] text-white shadow-emerald-900/20 active:scale-98'
+                  : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+              }`}
+            >
+              {isMesa ? (
+                <>
+                  <Receipt className="w-4 h-4" />
+                  <span>Fechar Conta da Mesa {orderDestination} ({formatCurrency(total)})</span>
+                </>
+              ) : (
+                <>
+                  <CreditCard className="w-4 h-4" />
+                  <span>Cobrar / Finalizar Pedido</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -572,8 +696,14 @@ export const PdvScreen: React.FC = () => {
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 flex flex-col">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div>
-                <h3 className="text-base font-extrabold text-[#0F2537]">Finalizar Cobrança</h3>
-                <p className="text-xs text-slate-500">Escolha a forma de pagamento do cliente</p>
+                <h3 className="text-base font-extrabold text-[#0F2537]">
+                  {isMesa ? `Fechar Conta • Mesa ${orderDestination}` : 'Finalizar Venda Balcão'}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {isMesa && currentTableOrder?.customerName 
+                    ? `Cliente: ${currentTableOrder.customerName}` 
+                    : 'Escolha a forma de pagamento do cliente'}
+                </p>
               </div>
               <div className="text-right">
                 <span className="text-xs text-slate-400 block">Total a Pagar</span>
@@ -690,7 +820,6 @@ export const PdvScreen: React.FC = () => {
             {paymentMethod === 'pix' && (
               <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl mb-4 text-center">
                 <div className="w-28 h-28 mx-auto bg-white p-2 rounded-xl shadow-xs border border-emerald-200 flex items-center justify-center">
-                  {/* Mock QR Code visual */}
                   <div className="w-full h-full bg-slate-900 rounded-lg flex items-center justify-center text-white">
                     <QrCode className="w-16 h-16 text-emerald-400" />
                   </div>
@@ -713,7 +842,7 @@ export const PdvScreen: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={handleFinishQuickSale}
+                onClick={handleFinishSale}
                 className="px-6 py-2.5 bg-[#10B981] hover:bg-[#0ea571] text-white rounded-xl text-xs font-extrabold shadow-md flex items-center gap-2 cursor-pointer"
               >
                 <Check className="w-4 h-4" />
