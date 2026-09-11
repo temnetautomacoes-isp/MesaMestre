@@ -3,9 +3,6 @@ import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import {
   Menu,
-  Home,
-  ShoppingBag,
-  Cloud,
   AlertCircle,
   BarChart3,
   Wallet,
@@ -15,8 +12,7 @@ import {
   Sparkles,
   CreditCard,
   Settings,
-  ShieldCheck,
-  Building2
+  ShieldCheck
 } from 'lucide-react';
 
 interface AdminHeaderProps {
@@ -26,17 +22,10 @@ interface AdminHeaderProps {
 export const AdminHeader: React.FC<AdminHeaderProps> = ({ onToggleSidebar }) => {
   const {
     activeScreen,
-    setActiveScreen,
-    setCurrentEnvironment,
-    currentCashSession,
-    ingredients,
-    formatCurrency,
-    businessConfig
+    setActiveScreen
   } = useApp();
 
-  const { subscription, currentCompany } = useAuth();
-
-  const lowStockCount = ingredients.filter(i => i.currentStock <= i.minimumStock).length;
+  const { subscription } = useAuth();
 
   const screenTitles: Record<string, { title: string; subtitle: string; icon: React.ElementType }> = {
     relatorios: { title: 'Relatórios & Métricas', subtitle: 'Desempenho de vendas e faturamento', icon: BarChart3 },
@@ -103,67 +92,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onToggleSidebar }) => 
           </div>
         </div>
 
-        {/* Lado Direito: Status Caixa + Nuvem + Alerta Estoque + Ir ao PDV */}
-        <div className="flex items-center gap-2 sm:gap-2.5">
-          {/* Status Caixa */}
-          <button
-            type="button"
-            onClick={() => {
-              setCurrentEnvironment('pdv');
-              setActiveScreen('caixa');
-            }}
-            className={`text-xs px-2.5 py-1.5 rounded-xl font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-              currentCashSession.isOpen
-                ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-900/80'
-                : 'bg-rose-950/80 text-rose-300 border border-rose-500/40 hover:bg-rose-900/80'
-            }`}
-            title="Clique para gerenciar o Caixa Cego"
-          >
-            <span className={`w-2 h-2 rounded-full ${currentCashSession.isOpen ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
-            <span className="hidden sm:inline">
-              {currentCashSession.isOpen ? `Caixa Aberto (${formatCurrency(currentCashSession.initialCash)})` : 'Caixa Fechado'}
-            </span>
-            <span className="sm:hidden">
-              {currentCashSession.isOpen ? 'Caixa Aberto' : 'Fechado'}
-            </span>
-          </button>
-
-          {/* Nuvem Online */}
-          <div
-            className="text-xs px-2.5 py-1.5 rounded-xl font-semibold bg-emerald-950/70 text-emerald-300 border border-emerald-500/30 hidden md:flex items-center gap-1.5 cursor-default"
-            title="Conectado e sincronizado com a Nuvem Realtime"
-          >
-            <Cloud className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Nuvem</span>
-          </div>
-
-          {/* Alerta de Estoque */}
-          {lowStockCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setActiveScreen('estoque')}
-              className="text-xs px-2.5 py-1.5 rounded-xl font-semibold bg-amber-950/80 text-amber-300 border border-amber-500/40 hover:bg-amber-900/80 flex items-center gap-1.5 cursor-pointer transition"
-              title="Itens com estoque baixo precisando de reposição"
-            >
-              <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
-              <span>{lowStockCount}</span>
-            </button>
-          )}
-
-          {/* Botão Ir ao PDV */}
-          <button
-            type="button"
-            onClick={() => {
-              setCurrentEnvironment('pdv');
-              setActiveScreen('pdv');
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition cursor-pointer shadow-md shadow-emerald-900/30"
-            title="Ir para o Caixa PDV"
-          >
-            <ShoppingBag className="w-3.5 h-3.5 text-white" />
-            <span className="hidden sm:inline">Ir ao PDV</span>
-          </button>
-        </div>
+        {/* Lado Direito Limpo (Sem botões extras de PDV/Caixa/Nuvem/Alerta no Painel Admin) */}
       </div>
     </header>
   );
