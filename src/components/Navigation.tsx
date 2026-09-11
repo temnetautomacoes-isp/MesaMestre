@@ -109,6 +109,68 @@ export const Navigation: React.FC = () => {
   const navItems = currentEnvironment === 'pdv' ? pdvNavItems : adminNavItems;
 
   // =========================================================================
+  // MODO 0: CABEÇALHO DO PAINEL SUPER ADMIN (Sem abas de PDV, com logo MesaMestre SaaS)
+  // =========================================================================
+  if (activeScreen === 'admin') {
+    return (
+      <header className="sticky top-0 z-30 bg-[#0F2537] text-white border-b border-[#1E4B75] shadow-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4">
+          
+          {/* Lado Esquerdo: Identidade MesaMestre com Super Admin */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setActiveScreen('hub')}
+              className="flex items-center gap-2.5 text-left hover:opacity-90 transition cursor-pointer"
+              title="Voltar ao Portal Inicial"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#10B981] to-[#0E7490] flex items-center justify-center shadow-inner">
+                <ChefHat className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="font-extrabold text-lg tracking-tight text-white leading-none">
+                    Mesa<span className="text-[#10B981]">Mestre</span>
+                  </span>
+                  <span className="text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-500/40 px-2 py-0.5 rounded-full font-bold uppercase">
+                    Super Admin
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-300 font-medium mt-0.5">
+                  Painel Central do SaaS
+                </span>
+              </div>
+            </button>
+          </div>
+
+          {/* Lado Direito: Ações Mínimas (Início, Sair) */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveScreen('hub')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0B1A28] hover:bg-[#132A40] text-slate-300 hover:text-white border border-[#1E4B75] text-xs font-bold transition cursor-pointer"
+              title="Voltar ao Portal de Escolha"
+            >
+              <Home className="w-3.5 h-3.5 text-slate-400" />
+              <span>Início</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="p-2 rounded-xl bg-rose-950/50 hover:bg-rose-900 text-rose-300 border border-rose-500/30 transition cursor-pointer"
+              title="Sair da conta"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+
+        </div>
+      </header>
+    );
+  }
+
+  // =========================================================================
   // MODO 1: CABEÇALHO LIMPO PARA O CAIXA PDV (Apenas as 4 abas e visual limpo)
   // =========================================================================
   if (currentEnvironment === 'pdv') {
