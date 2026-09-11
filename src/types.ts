@@ -95,11 +95,15 @@ export interface UserProfile {
 }
 
 export type BusinessType = 
+  | 'restaurante'
   | 'restaurante_caseiro'
+  | 'bar'
   | 'boteco_bar'
   | 'lanchonete'
+  | 'hamburgueria'
   | 'marmitaria'
-  | 'pizzaria';
+  | 'pizzaria'
+  | 'outro';
 
 export interface BusinessConfig {
   name: string;

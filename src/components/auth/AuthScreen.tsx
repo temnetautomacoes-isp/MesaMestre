@@ -465,10 +465,11 @@ export const AuthScreen: React.FC<{ initialMode?: 'login' | 'register' | 'forgot
                       onChange={e => setRegBusinessType(e.target.value)}
                       className="w-full bg-[#0B1A28] border border-[#1E4B75] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-[#10B981]"
                     >
-                      <option value="restaurante">Restaurante Caseiro / Comercial</option>
-                      <option value="bar">Boteco / Bar / Petiscaria</option>
-                      <option value="lanchonete">Lanchonete / Hamburgueria</option>
-                      <option value="marmitaria">Marmitaria & Delivery</option>
+                      <option value="restaurante">Restaurante</option>
+                      <option value="bar">Bar</option>
+                      <option value="marmitaria">Marmitaria</option>
+                      <option value="lanchonete">Lanchonete</option>
+                      <option value="hamburgueria">Hamburgueria</option>
                       <option value="pizzaria">Pizzaria</option>
                       <option value="outro">Outro Estabelecimento</option>
                     </select>

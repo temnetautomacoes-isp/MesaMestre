@@ -7,7 +7,8 @@ import {
   Beer, 
   UtensilsCrossed, 
   Pizza, 
-  Sandwich, 
+  Sandwich,
+  Flame,
   Check, 
   Percent, 
   Coins, 
@@ -38,11 +39,12 @@ export const OnboardingScreen: React.FC = () => {
   });
 
   const businessTypes: { id: BusinessType; title: string; desc: string; icon: React.ElementType }[] = [
-    { id: 'restaurante_caseiro', title: 'Restaurante Caseiro', desc: 'Pratos feitos, self-service e almoço de família', icon: UtensilsCrossed },
-    { id: 'boteco_bar', title: 'Boteco & Bar', desc: 'Cervejas trincando, porções, petiscos e caipirinhas', icon: Beer },
+    { id: 'restaurante', title: 'Restaurante', desc: 'Pratos feitos, self-service e almoço de família', icon: UtensilsCrossed },
+    { id: 'bar', title: 'Bar', desc: 'Cervejas trincando, porções, petiscos e caipirinhas', icon: Beer },
     { id: 'marmitaria', title: 'Marmitaria', desc: 'Marmitas executivas, entrega e comida boa para levar', icon: Store },
-    { id: 'lanchonete', title: 'Lanchonete & Hambúrguer', desc: 'Lanches na chapa, salgados, pastéis e sucos', icon: Sandwich },
-    { id: 'pizzaria', title: 'Pizzaria & Forno', desc: 'Pizzas inteiras, fatias, calzones e esfirras', icon: Pizza },
+    { id: 'lanchonete', title: 'Lanchonete', desc: 'Lanches na chapa, salgados, pastéis e sucos', icon: Sandwich },
+    { id: 'hamburgueria', title: 'Hamburgueria', desc: 'Burgers artesanais, combos especiais e porções', icon: Flame },
+    { id: 'pizzaria', title: 'Pizzaria', desc: 'Pizzas inteiras, fatias, calzones e esfirras', icon: Pizza },
   ];
 
   const handleSubmit = (e: React.FormEvent) => {

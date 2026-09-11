@@ -8,6 +8,7 @@ import {
   UtensilsCrossed,
   Pizza,
   Sandwich,
+  Flame,
   MapPin,
   Phone,
   Sparkles,
@@ -41,7 +42,7 @@ export const GoogleOnboardingModal: React.FC = () => {
   const defaultCompanyName = displayName ? `Restaurante ${displayName.split(' ')[0]}` : 'Meu Restaurante';
 
   const [companyName, setCompanyName] = useState(defaultCompanyName);
-  const [businessType, setBusinessType] = useState('restaurante_caseiro');
+  const [businessType, setBusinessType] = useState('restaurante');
   const [city, setCity] = useState('São Paulo');
   const [state, setState] = useState('SP');
   const [whatsapp, setWhatsapp] = useState('(11) 98765-4321');
@@ -53,11 +54,12 @@ export const GoogleOnboardingModal: React.FC = () => {
   const [showTermsModal, setShowTermsModal] = useState(false);
 
   const businessTypes = [
-    { id: 'restaurante_caseiro', title: 'Restaurante Caseiro', desc: 'Pratos feitos e self-service', icon: UtensilsCrossed },
-    { id: 'boteco_bar', title: 'Boteco & Bar', desc: 'Porções, petiscos e bebidas', icon: Beer },
+    { id: 'restaurante', title: 'Restaurante', desc: 'Pratos feitos e self-service', icon: UtensilsCrossed },
+    { id: 'bar', title: 'Bar', desc: 'Porções, petiscos e bebidas', icon: Beer },
     { id: 'marmitaria', title: 'Marmitaria', desc: 'Marmitas executivas e entrega', icon: Store },
-    { id: 'lanchonete', title: 'Lanchonete & Burger', desc: 'Lanches na chapa e sucos', icon: Sandwich },
-    { id: 'pizzaria', title: 'Pizzaria & Forno', desc: 'Pizzas, fatias e esfirras', icon: Pizza },
+    { id: 'lanchonete', title: 'Lanchonete', desc: 'Lanches na chapa e sucos', icon: Sandwich },
+    { id: 'hamburgueria', title: 'Hamburgueria', desc: 'Burgers artesanais e combos', icon: Flame },
+    { id: 'pizzaria', title: 'Pizzaria', desc: 'Pizzas, fatias e esfirras', icon: Pizza },
   ];
 
   const tourSteps = [
