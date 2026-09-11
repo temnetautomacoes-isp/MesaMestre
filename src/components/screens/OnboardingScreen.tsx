@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import { BusinessType } from '../../types';
 import { 
   Building2, 
@@ -24,16 +25,20 @@ import {
 
 export const OnboardingScreen: React.FC = () => {
   const { businessConfig, updateBusinessConfig, setActiveScreen, showToast } = useApp();
+  const { currentCompany, updateCurrentCompany } = useAuth();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const initialName = businessConfig.name || currentCompany?.name || 'Meu Restaurante';
+  const initialLogo = businessConfig.logoUrl || (currentCompany as any)?.logoUrl || '';
+
   const [formData, setFormData] = useState({
-    name: businessConfig.name,
+    name: initialName,
     ownerName: businessConfig.ownerName,
     type: businessConfig.type,
     phone: businessConfig.phone,
     city: businessConfig.city,
     state: businessConfig.state,
-    logoUrl: businessConfig.logoUrl || '',
+    logoUrl: initialLogo,
     tableCount: businessConfig.tableCount,
     pixRate: businessConfig.rates.pix,
     debitoRate: businessConfig.rates.debito,
@@ -70,14 +75,17 @@ export const OnboardingScreen: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const finalName = formData.name.trim() || 'Meu Restaurante';
+    const finalLogo = formData.logoUrl.trim() || undefined;
+
     updateBusinessConfig({
-      name: formData.name,
+      name: finalName,
       ownerName: formData.ownerName,
       type: formData.type,
       phone: formData.phone,
       city: formData.city,
       state: formData.state,
-      logoUrl: formData.logoUrl.trim() || undefined,
+      logoUrl: finalLogo,
       tableCount: Number(formData.tableCount),
       rates: {
         pix: Number(formData.pixRate),
@@ -88,6 +96,16 @@ export const OnboardingScreen: React.FC = () => {
       initialCashDefault: Number(formData.initialCashDefault),
       serviceChargePercentage: Number(formData.serviceChargePercentage),
       isSetupComplete: true
+    });
+
+    // Atualiza também os dados da empresa ativa
+    updateCurrentCompany({
+      name: finalName,
+      businessType: formData.type,
+      city: formData.city,
+      state: formData.state,
+      whatsapp: formData.phone,
+      logoUrl: finalLogo
     });
 
     showToast('Alterações Salvas!', 'As configurações do seu estabelecimento foram atualizadas com sucesso.');

@@ -27,8 +27,8 @@ export const HubScreen: React.FC = () => {
   const { currentCompany, user, profile, subscription, isSuperAdmin, signOut } = useAuth();
   const { businessConfig, setActiveScreen, setCurrentEnvironment } = useApp();
 
-  const companyName = currentCompany?.name || businessConfig?.name || 'Seu Restaurante';
-  const logoUrl = (currentCompany as any)?.logoUrl || businessConfig?.logoUrl;
+  const companyName = businessConfig?.name || currentCompany?.name || 'Seu Restaurante';
+  const logoUrl = businessConfig?.logoUrl || (currentCompany as any)?.logoUrl;
   const companyInitials = getCompanyInitials(companyName);
 
   return (

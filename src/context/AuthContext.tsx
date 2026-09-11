@@ -31,6 +31,7 @@ interface AuthContextType {
   forgotPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
   resetPassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
   switchCompany: (companyId: string) => Promise<void>;
+  updateCurrentCompany: (updates: Partial<Company>) => Promise<void>;
   refreshCompanyData: () => Promise<void>;
   clearAuthError: () => void;
   enterAsSuperAdmin: () => Promise<void>;
@@ -711,6 +712,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateCurrentCompany = async (updates: Partial<Company>) => {
+    if (currentCompany) {
+      const updated: Company = { ...currentCompany, ...updates, updatedAt: new Date().toISOString() };
+      setCurrentCompany(updated);
+      setUserCompanies(prev => prev.map(c => c.id === updated.id ? updated : c));
+      
+      if (user) {
+        localStorage.setItem('mm_user_company_' + user.id, JSON.stringify(updated));
+        try {
+          await supabase.from('companies').update({
+            name: updated.name,
+            business_type: updated.businessType,
+            city: updated.city,
+            state: updated.state,
+            whatsapp: updated.whatsapp,
+            logo_url: updated.logoUrl
+          }).eq('id', updated.id);
+        } catch (e) {
+          console.warn('Aviso: Atualização no banco ignorada:', e);
+        }
+      }
+    }
+  };
+
   const refreshCompanyData = async () => {
     if (user) {
       await fetchUserData(user);
@@ -788,6 +813,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       forgotPassword,
       resetPassword,
       switchCompany,
+      updateCurrentCompany,
       refreshCompanyData,
       clearAuthError,
       enterAsSuperAdmin

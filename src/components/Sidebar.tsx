@@ -173,8 +173,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, setIsMobileOpen 
         <div className="px-3.5 py-3 border-b border-[#1E4B75]/70 bg-[#0F2537]/50">
           <div className="relative">
             {(() => {
-              const companyName = currentCompany?.name || businessConfig?.name || 'Seu Restaurante';
-              const logoUrl = (currentCompany as any)?.logoUrl || businessConfig?.logoUrl;
+              const companyName = businessConfig?.name || currentCompany?.name || 'Seu Restaurante';
+              const logoUrl = businessConfig?.logoUrl || (currentCompany as any)?.logoUrl;
               const companyInitials = getCompanyInitials(companyName);
 
               return userCompanies.length > 1 || isSuperAdmin ? (
