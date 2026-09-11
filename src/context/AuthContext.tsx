@@ -216,6 +216,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
+      // 6. Se o usuário já concluiu o cadastro/onboarding anteriormente mas as tabelas não retornaram registros, restaura dos metadados
+      if (companiesList.length === 0) {
+        const meta = authUser.user_metadata || {};
+        const hasOnboardingDone = 
+          Boolean(meta.has_completed_onboarding) || 
+          Boolean(localStorage.getItem('mm_onboarding_completed_' + authUser.id)) || 
+          Boolean(meta.company_name);
+
+        if (hasOnboardingDone) {
+          const rawName = meta.company_name || ('Restaurante ' + (meta.full_name?.split(' ')[0] || 'Meu Estabelecimento'));
+          const fallbackComp: Company = {
+            id: meta.company_id || ('comp-' + authUser.id.slice(0, 8)),
+            name: rawName,
+            slug: rawName.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30) || 'meu-restaurante',
+            ownerId: authUser.id,
+            businessType: meta.business_type || 'restaurante_caseiro',
+            city: meta.city || 'São Paulo',
+            state: meta.state || 'SP',
+            whatsapp: meta.whatsapp || '',
+            status: 'active',
+            createdAt: authUser.created_at || new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          companiesList.push(fallbackComp);
+          localStorage.setItem('mm_onboarding_completed_' + authUser.id, 'true');
+          localStorage.setItem('mm_user_company_' + authUser.id, JSON.stringify(fallbackComp));
+        }
+      }
+
       setUserCompanies(companiesList);
       setCurrentMembership(defaultMembership);
 
@@ -225,6 +254,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentCompany(selected);
         localStorage.setItem('mm_active_company_id', selected.id);
         localStorage.setItem('mm_user_company_' + authUser.id, JSON.stringify(selected));
+        localStorage.setItem('mm_onboarding_completed_' + authUser.id, 'true');
         await fetchSubscription(selected.id);
       } else {
         setCurrentCompany(null);
@@ -372,13 +402,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (data: SignUpData): Promise<{ success: boolean; error?: string }> => {
     setAuthError(null);
     try {
-      // 1. Criar usuário no Supabase Auth
+      // 1. Criar usuário no Supabase Auth com todos os metadados do restaurante
       const { data: authData, error: authErr } = await supabase.auth.signUp({
         email: data.email.trim().toLowerCase(),
         password: data.password,
         options: {
           data: {
-            full_name: data.fullName.trim()
+            full_name: data.fullName.trim(),
+            company_name: data.companyName.trim(),
+            business_type: data.businessType,
+            city: data.city.trim(),
+            state: data.state.trim().toUpperCase(),
+            whatsapp: data.whatsapp.trim(),
+            has_completed_onboarding: true
           }
         }
       });
@@ -397,6 +433,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!authData.user) {
         return { success: false, error: 'Não foi possível criar a conta de usuário.' };
       }
+
+      // Marcar onboarding como concluído para nunca mais exibir o modal
+      localStorage.setItem('mm_onboarding_completed_' + authData.user.id, 'true');
 
       // 2. Garantir perfil criado
       await supabase.from('profiles').upsert({
@@ -417,7 +456,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (rpcErr) {
         console.error('Erro ao registrar restaurante:', rpcErr);
-        // Tenta buscar se foi criado
         await fetchUserData(authData.user);
       } else if (authData.user) {
         await fetchUserData(authData.user);
@@ -570,10 +608,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updatedAt: new Date().toISOString()
       };
 
-      setUserCompanies([activeComp]);
-      setCurrentCompany(activeComp);
+      // Atualiza metadados do usuário no Supabase Auth
+      try {
+        await supabase.auth.updateUser({
+          data: {
+            has_completed_onboarding: true,
+            company_name: activeComp.name,
+            company_id: activeComp.id,
+            business_type: activeComp.businessType,
+            city: activeComp.city,
+            state: activeComp.state,
+            whatsapp: activeComp.whatsapp
+          }
+        });
+      } catch (e) {
+        console.warn('Aviso: Falha ao atualizar metadata do usuário:', e);
+      }
+
+      localStorage.setItem('mm_onboarding_completed_' + user.id, 'true');
       localStorage.setItem('mm_active_company_id', activeComp.id);
       localStorage.setItem('mm_user_company_' + user.id, JSON.stringify(activeComp));
+
+      setUserCompanies([activeComp]);
+      setCurrentCompany(activeComp);
       setSubscription({
         id: 'sub-' + activeComp.id,
         companyId: activeComp.id,

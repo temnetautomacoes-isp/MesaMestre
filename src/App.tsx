@@ -50,9 +50,31 @@ const MainLayout: React.FC = () => {
     return <AuthScreen />;
   }
 
-  // 3. Usuário autenticado (ex: via Google) sem empresa cadastrada -> Onboarding Obrigatório
-  if (!isSuperAdmin && (!currentCompany || userCompanies.length === 0)) {
+  // 3. Usuário autenticado sem onboarding concluído -> Onboarding Obrigatório SOMENTE no primeiro acesso após cadastro
+  const hasCompletedOnboarding = 
+    Boolean(user.user_metadata?.has_completed_onboarding) || 
+    Boolean(localStorage.getItem(`mm_onboarding_completed_${user.id}`)) ||
+    Boolean(user.user_metadata?.company_name) ||
+    Boolean(currentCompany) || 
+    userCompanies.length > 0;
+
+  if (!isSuperAdmin && !hasCompletedOnboarding) {
     return <GoogleOnboardingModal />;
+  }
+
+  // Se já concluiu o onboarding mas os dados da empresa ainda estão sendo sincronizados
+  if (!isSuperAdmin && !currentCompany && userCompanies.length === 0) {
+    return (
+      <div className="min-h-screen bg-[#0F2537] text-white flex flex-col items-center justify-center gap-4">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#10B981] to-[#0E7490] flex items-center justify-center shadow-lg animate-pulse">
+          <ChefHat className="w-8 h-8 text-white" />
+        </div>
+        <div className="flex items-center gap-2 text-slate-300 text-xs font-semibold">
+          <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+          <span>Acessando seu restaurante...</span>
+        </div>
+      </div>
+    );
   }
 
   // 4. Verificação de Status da Conta / Assinatura (se não for Super Admin)
