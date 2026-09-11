@@ -69,8 +69,7 @@ export const OnboardingScreen: React.FC = () => {
       isSetupComplete: true
     });
 
-    showToast('Tudo Pronto!', 'As configurações do seu estabelecimento estão salvas.');
-    setActiveScreen('hub');
+    showToast('Alterações Salvas!', 'As configurações do seu estabelecimento foram atualizadas com sucesso.');
   };
 
   return (
@@ -334,14 +333,14 @@ export const OnboardingScreen: React.FC = () => {
             </div>
           </div>
 
-          {/* Botão de Salvar */}
+          {/* Botão de Salvar Alterações */}
           <div className="pt-6 border-t border-slate-100 flex items-center justify-end gap-3">
             <button
               type="submit"
               className="px-6 py-3 bg-[#10B981] hover:bg-[#0ea571] text-white rounded-2xl text-sm font-extrabold shadow-lg hover:shadow-xl transition-all flex items-center gap-2 cursor-pointer"
             >
-              <span>Salvar e Ir para o PDV</span>
-              <ArrowRight className="w-4 h-4" />
+              <Check className="w-4 h-4" />
+              <span>Salvar Alterações</span>
             </button>
           </div>
         </form>
