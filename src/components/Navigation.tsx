@@ -128,16 +128,11 @@ export const Navigation: React.FC = () => {
                 <ChefHat className="w-6 h-6 text-white" />
               </div>
               <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-lg tracking-tight text-white leading-none">
-                    Mesa<span className="text-[#10B981]">Mestre</span>
-                  </span>
-                  <span className="text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-500/40 px-2 py-0.5 rounded-full font-bold uppercase">
-                    Super Admin
-                  </span>
-                </div>
-                <span className="text-[11px] text-slate-300 font-medium mt-0.5">
-                  Painel Central do SaaS
+                <span className="font-extrabold text-lg tracking-tight text-white leading-none">
+                  Mesa<span className="text-[#10B981]">Mestre</span>
+                </span>
+                <span className="text-[11px] text-emerald-400 font-medium mt-1">
+                  Painel de Gestão
                 </span>
               </div>
             </button>
