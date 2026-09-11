@@ -110,6 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             state: c.state,
             whatsapp: c.whatsapp,
             status: c.status,
+            logoUrl: c.logo_url || c.logoUrl,
             createdAt: c.created_at,
             updatedAt: c.updated_at
           }));
@@ -148,6 +149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 state: m.company.state,
                 whatsapp: m.company.whatsapp,
                 status: m.company.status,
+                logoUrl: m.company.logo_url || m.company.logoUrl,
                 createdAt: m.company.created_at,
                 updatedAt: m.company.updated_at
               };
@@ -190,6 +192,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               state: c.state,
               whatsapp: c.whatsapp,
               status: c.status,
+              logoUrl: c.logo_url || c.logoUrl,
               createdAt: c.created_at,
               updatedAt: c.updated_at
             };

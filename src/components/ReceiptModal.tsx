@@ -1,17 +1,31 @@
 import React, { useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { Printer, Share2, X, Check, Copy, FileText, CheckCircle2 } from 'lucide-react';
 
 export const ReceiptModal: React.FC = () => {
   const { activeReceipt, setActiveReceipt, businessConfig, formatCurrency, showToast } = useApp();
+  const { currentCompany } = useAuth();
   const receiptRef = useRef<HTMLDivElement>(null);
   const [paperWidth, setPaperWidth] = useState<'80mm' | '58mm'>('80mm');
   const [copied, setCopied] = useState(false);
 
   if (!activeReceipt) return null;
 
+  const getFallbackLogo = () => {
+    try {
+      const savedConfig = localStorage.getItem('mesamestre_config');
+      if (savedConfig) {
+        const parsed = JSON.parse(savedConfig);
+        if (parsed?.logoUrl) return parsed.logoUrl;
+      }
+    } catch (e) {}
+    return '';
+  };
+
+  const effectiveLogo = businessConfig.logoUrl || currentCompany?.logoUrl || (currentCompany as any)?.logo_url || getFallbackLogo();
   const printSettings = businessConfig.printSettings;
-  const showLogo = (printSettings?.showLogo ?? true) && !!businessConfig.logoUrl;
+  const showLogo = (printSettings?.showLogo ?? true) && !!effectiveLogo;
   const showName = printSettings?.showName ?? true;
   const showLegalName = (printSettings?.showLegalName ?? false) && !!businessConfig.legalName;
   const showCnpj = (printSettings?.showCnpj ?? true) && !!businessConfig.cnpj;
@@ -158,7 +172,7 @@ export const ReceiptModal: React.FC = () => {
               {showLogo && (
                 <div className="flex justify-center pb-1">
                   <img
-                    src={businessConfig.logoUrl}
+                    src={effectiveLogo}
                     alt="Logo da Empresa"
                     className="max-h-14 max-w-[120px] object-contain"
                   />
